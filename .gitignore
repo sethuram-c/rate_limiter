@@ -1,0 +1,22 @@
+# Build outputs
+build/
+*.o
+*.a
+*.so
+
+# Test / profiling artifacts
+*.gcda
+*.gcno
+*.gcov
+perf.data
+perf.data.old
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Local learning material is intentionally kept outside the repository.
+phase-*-learning*.pdf
