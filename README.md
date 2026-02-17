@@ -9,34 +9,37 @@ The finished project is intended to demonstrate:
 
 - C11 systems programming and API design
 - token-bucket rate limiting
-- atomic operations and memory ordering
-- lock-free request-path design
-- fixed-capacity concurrent hashing
-- correctness testing under contention
-- benchmarking and performance analysis
+- Linux monotonic time and defensive integer conversion
+- atomic operations and memory ordering (future phases)
+- lock-free request-path design (future phases)
+- fixed-capacity concurrent hashing (future phases)
+- correctness testing and performance analysis (future phases)
 
-## Current status - Phase 2
+## Current status - Phase 3
 
-Phase 2 introduces the first working rate-limiting algorithm: a deterministic,
-single-threaded token bucket. It deliberately does **not** use atomics yet. The goal
-is to establish and test the sequential state machine before concurrency is added.
+Phase 3 adds a Linux `CLOCK_MONOTONIC` adapter while keeping the sequential
+bucket's policy API deterministic. There are **no atomics or per-IP buckets yet**.
 
-The bucket:
+The bucket starts full, consumes one token per permitted request, refills one
+token per complete configured interval, and never exceeds capacity. Callers
+provide `now_ns`, so unit tests can simulate timestamps without sleeping.
 
-- starts full
-- consumes one token for each admitted request
-- denies requests while empty
-- refills one token for every complete configured interval
-- never exceeds its configured capacity
-- accepts time as an input, making tests deterministic
+The clock module:
+
+- reads `clock_gettime(CLOCK_MONOTONIC, ...)` for elapsed-time accounting;
+- converts seconds/nanoseconds into `uint64_t` nanoseconds;
+- rejects invalid `timespec` values and conversion overflow;
+- returns explicit status and does not overwrite outputs on failure.
+
+`CLOCK_MONOTONIC` values are **not Unix timestamps**. On Linux, this clock normally
+does not include time while the system is suspended; that distinction may
+matter for future rate-limit policy decisions.
 
 ## Requirements
 
 - Linux or WSL2
 - GCC or Clang with C11 support
-- GNU Make
-- Bash
-- Git
+- GNU Make, Bash and Git
 
 On Ubuntu/Debian:
 
@@ -50,41 +53,54 @@ sudo apt install -y build-essential git clang gdb valgrind
 ```bash
 make clean
 make
-make run
-make test
+make run        # deterministic demonstration (default)
+make run-live   # real CLOCK_MONOTONIC sample
+make test       # both sets of C unit tests + shell smoke test
 ```
 
 Expected test output includes:
 
 ```text
 token bucket tests passed
-smoke test passed: deterministic token bucket demo behaves as expected
+monotonic clock tests passed
+smoke test passed: deterministic and live clock demos behave as expected
+```
+
+You can also test with Clang:
+
+```bash
+make clean
+make CC=clang
+make CC=clang test
 ```
 
 ## Repository layout
 
 ```text
 .
-├── bench/                   # performance benchmarks added later
+├── bench/                       # benchmarks arrive later
 ├── include/
-│   └── token_bucket.h       # sequential token-bucket API
+│   ├── monotonic_clock.h        # Linux/POSIX time adapter API
+│   └── token_bucket.h           # deterministic bucket API
 ├── src/
-│   ├── main.c               # deterministic demonstration program
-│   └── token_bucket.c       # token-bucket implementation
+│   ├── main.c                   # deterministic and live demos
+│   ├── monotonic_clock.c        # POSIX clock and safe conversion
+│   └── token_bucket.c           # sequential token-bucket policy
 ├── tests/
-│   ├── smoke.sh             # end-to-end behavior smoke test
-│   └── test_token_bucket.c  # focused algorithm tests
+│   ├── smoke.sh                 # end-to-end CLI checks
+│   ├── test_monotonic_clock.c   # pure conversion + monotonicity checks
+│   └── test_token_bucket.c      # deterministic policy checks
 ├── .gitignore
 ├── Makefile
 ├── README.md
 └── progress.md
 ```
 
-Learning PDFs are deliberately kept outside this repository so Git history contains
-only project artifacts.
+Learning PDFs are stored **outside** this repository, not committed to Git.
 
-## Design note
+## Design boundary
 
-The algorithm currently refills in whole-token intervals. That keeps the arithmetic
-integer-only and makes boundary behavior explicit. Later phases will add a monotonic
-clock adapter, per-IP state, concurrency, atomics, and lock-free data structures.
+`monotonic_clock_now_ns()` obtains real time, while `token_bucket_try_consume()`
+accepts that time as input. This separation keeps the policy reusable and the
+algorithm tests deterministic. Later phases will add per-IP state and concurrency
+without forcing real sleeps into the unit tests.
