@@ -15,13 +15,14 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent hashing (future phases)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 3
+## Current status - Phase 4
 
-Phase 3 adds a Linux `CLOCK_MONOTONIC` adapter while keeping the sequential
-bucket's policy API deterministic. There are **no atomics or per-IP buckets yet**.
+Phase 4 strengthens the sequential token bucket with overflow/boundary tests,
+an all-or-nothing multi-token consumption API, and a deterministic reference-model
+comparison. There are **no atomics or per-IP buckets yet**.
 
-The bucket starts full, consumes one token per permitted request, refills one
-token per complete configured interval, and never exceeds capacity. Callers
+The bucket starts full, consumes one or more tokens per permitted request, refills
+one token per complete configured interval, and never exceeds capacity. Callers
 provide `now_ns`, so unit tests can simulate timestamps without sleeping.
 
 The clock module:
@@ -55,7 +56,8 @@ make clean
 make
 make run        # deterministic demonstration (default)
 make run-live   # real CLOCK_MONOTONIC sample
-make test       # both sets of C unit tests + shell smoke test
+make test       # C unit tests, reference-model test + shell smoke test
+make properties-test  # 48,000 deterministic reference comparisons
 ```
 
 Expected test output includes:
@@ -63,6 +65,7 @@ Expected test output includes:
 ```text
 token bucket tests passed
 monotonic clock tests passed
+token bucket property tests passed: 48000 deterministic operations
 smoke test passed: deterministic and live clock demos behave as expected
 ```
 
@@ -88,6 +91,7 @@ make CC=clang test
 │   └── token_bucket.c           # sequential token-bucket policy
 ├── tests/
 │   ├── smoke.sh                 # end-to-end CLI checks
+│   ├── test_bucket_properties.c # 48,000 model-based operations
 │   ├── test_monotonic_clock.c   # pure conversion + monotonicity checks
 │   └── test_token_bucket.c      # deterministic policy checks
 ├── .gitignore
@@ -104,3 +108,31 @@ Learning PDFs are stored **outside** this repository, not committed to Git.
 accepts that time as input. This separation keeps the policy reusable and the
 algorithm tests deterministic. Later phases will add per-IP state and concurrency
 without forcing real sleeps into the unit tests.
+
+## Sequential bucket contract (Phase 4)
+
+`token_bucket_try_consume_n(&bucket, amount, now_ns)` returns `true` only if
+*all* `amount` tokens are available; it never partially deducts them. `amount=0`
+is invalid and does not even trigger refill. A failed request for too many tokens
+does trigger elapsed-time refill before the rejection. The earlier
+`token_bucket_try_consume()` still consumes exactly one token.
+
+Valid initialized state satisfies `0 <= tokens <= capacity`, with positive
+capacity and refill interval. Refills cannot move `last_refill_ns` backwards;
+any whole-interval anchor advancement is bounded above by the caller's time.
+Time values must come from the same monotonic time source.
+
+**Thread-safety warning:** This `token_bucket_t` is still a sequential data
+structure. Do not share one instance between threads without synchronization.
+A later phase will replace the representation with an atomic concurrency model.
+
+## Further verification (Linux)
+
+```bash
+make clean && make && make test
+make clean && make CC=clang && make CC=clang test
+make clean && make CFLAGS='-std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fsanitize=undefined -fno-omit-frame-pointer' LDFLAGS='-fsanitize=undefined' test
+make clean && make test
+```
+
+The learning PDF for this milestone lives **outside** the Git repository.

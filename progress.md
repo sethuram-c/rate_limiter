@@ -86,3 +86,37 @@ Status: complete
 
 Strengthen the sequential token-bucket API and its edge-case test matrix before
 introducing concurrency; then start focused C11 atomic programming exercises.
+
+## Phase 4 - Boundary invariants and correctness matrix
+
+Status: complete
+
+### Added
+
+- documented sequential invariants and caller obligations
+- `token_bucket_try_consume_n()` for all-or-nothing multi-token requests
+- retained single-token API as a wrapper around the shared consumption path
+- explicit overflow proof for whole-interval anchor advancement
+- edge tests for invalid input, refill failure, stale time, `UINT64_MAX`
+  timestamps, `UINT64_MAX` capacity, and large refill intervals
+- separate deterministic reference-model test covering 48,000 mixed operations
+- `make properties-test` plus integration into `make test`
+
+### Acceptance criteria
+
+- all batch requests are atomic in the single-threaded *logical* sense:
+  either the entire requested amount is taken or none of it is
+- a zero-amount batch leaves the bucket untouched
+- a rejected insufficient-funds batch may still accrue elapsed-time refill
+- token balance stays in `[0, capacity]` at every operation
+- refill anchor never moves backward for stale caller timestamps
+- arithmetic never overflows for valid initialized state and `uint64_t` time
+- reference implementation agrees with production across 48,000 operations
+- GCC, Clang, and sanitizer checks pass on Linux
+- deterministic and live CLI behavior remains unchanged
+
+### Next phase
+
+Introduce self-contained C11 atomic operations experiments. The sequential
+bucket intentionally remains not thread-safe until the concurrency design
+and state representation are established.

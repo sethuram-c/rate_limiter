@@ -8,6 +8,7 @@ static void token_bucket_refill(token_bucket_t *bucket, uint64_t now_ns)
     uint64_t refill_tokens;
     uint64_t space;
 
+    /* Never rewind the refill anchor for stale or equal timestamps. */
     if (now_ns <= bucket->last_refill_ns) {
         return;
     }
@@ -19,16 +20,20 @@ static void token_bucket_refill(token_bucket_t *bucket, uint64_t now_ns)
         return;
     }
 
-    /* Advance only by complete refill intervals; preserve partial elapsed time. */
+    /*
+     * Overflow proof: refill_tokens * interval <= elapsed_ns, and
+     * last_refill_ns + elapsed_ns == now_ns <= UINT64_MAX.
+     * Advance by whole intervals to keep fractional elapsed time.
+     */
     bucket->last_refill_ns += refill_tokens * bucket->refill_interval_ns;
 
+    /* Saturate by subtracting first, never by adding past capacity. */
     space = bucket->capacity - bucket->tokens;
     if (refill_tokens >= space) {
         bucket->tokens = bucket->capacity;
-        return;
+    } else {
+        bucket->tokens += refill_tokens;
     }
-
-    bucket->tokens += refill_tokens;
 }
 
 int token_bucket_init(token_bucket_t *bucket,
@@ -44,24 +49,29 @@ int token_bucket_init(token_bucket_t *bucket,
     bucket->tokens = capacity;
     bucket->refill_interval_ns = refill_interval_ns;
     bucket->last_refill_ns = now_ns;
-
     return 0;
 }
 
-bool token_bucket_try_consume(token_bucket_t *bucket, uint64_t now_ns)
+bool token_bucket_try_consume_n(token_bucket_t *bucket,
+                                uint64_t amount,
+                                uint64_t now_ns)
 {
-    if (bucket == NULL) {
+    if (bucket == NULL || amount == 0U) {
         return false;
     }
 
     token_bucket_refill(bucket, now_ns);
-
-    if (bucket->tokens == 0U) {
+    if (amount > bucket->tokens) {
         return false;
     }
 
-    bucket->tokens--;
+    bucket->tokens -= amount;
     return true;
+}
+
+bool token_bucket_try_consume(token_bucket_t *bucket, uint64_t now_ns)
+{
+    return token_bucket_try_consume_n(bucket, 1U, now_ns);
 }
 
 uint64_t token_bucket_available(token_bucket_t *bucket, uint64_t now_ns)
