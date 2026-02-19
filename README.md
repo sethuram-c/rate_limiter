@@ -10,16 +10,21 @@ The finished project is intended to demonstrate:
 - C11 systems programming and API design
 - token-bucket rate limiting
 - Linux monotonic time and defensive integer conversion
-- atomic operations and memory ordering (future phases)
+- atomic operations and memory ordering (C11 teaching lab in Phase 5)
 - lock-free request-path design (future phases)
 - fixed-capacity concurrent hashing (future phases)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 4
+## Current status - Phase 5
 
-Phase 4 strengthens the sequential token bucket with overflow/boundary tests,
-an all-or-nothing multi-token consumption API, and a deterministic reference-model
-comparison. There are **no atomics or per-IP buckets yet**.
+Phase 5 adds a **self-contained atomic teaching lab** rather than prematurely
+changing the bucket. It covers a CAS-based bounded counter (relaxed ordering),
+one-time payload publication (release/acquire ordering), pthread contention,
+and a runtime `atomic_is_lock_free` check. These examples are **not yet** the
+production rate limiter. The existing sequential token bucket is still **not
+thread-safe**, and per-IP routing has not been implemented.
+
+Phase 4's boundary and reference-model testing remain intact.
 
 The bucket starts full, consumes one or more tokens per permitted request, refills
 one token per complete configured interval, and never exceeds capacity. Callers
@@ -58,6 +63,8 @@ make run        # deterministic demonstration (default)
 make run-live   # real CLOCK_MONOTONIC sample
 make test       # C unit tests, reference-model test + shell smoke test
 make properties-test  # 48,000 deterministic reference comparisons
+make atomic-test      # CAS contention + release/acquire publication test
+make atomic-demo      # small runnable C11 atomics lesson
 ```
 
 Expected test output includes:
@@ -66,6 +73,7 @@ Expected test output includes:
 token bucket tests passed
 monotonic clock tests passed
 token bucket property tests passed: 48000 deterministic operations
+atomic lab tests passed: 6 writers, 50000 bounded increments, 6 publication readers
 smoke test passed: deterministic and live clock demos behave as expected
 ```
 
@@ -82,15 +90,20 @@ make CC=clang test
 ```text
 .
 ├── bench/                       # benchmarks arrive later
+├── examples/
+│   └── atomic_lab_demo.c        # runnable phase-5 experiments
 ├── include/
+│   ├── atomic_lab.h             # CAS counter and release/acquire mailbox
 │   ├── monotonic_clock.h        # Linux/POSIX time adapter API
 │   └── token_bucket.h           # deterministic bucket API
 ├── src/
+│   ├── atomic_lab.c             # educational C11 atomics module
 │   ├── main.c                   # deterministic and live demos
 │   ├── monotonic_clock.c        # POSIX clock and safe conversion
 │   └── token_bucket.c           # sequential token-bucket policy
 ├── tests/
 │   ├── smoke.sh                 # end-to-end CLI checks
+│   ├── test_atomic_lab.c        # concurrent CAS and publication checks
 │   ├── test_bucket_properties.c # 48,000 model-based operations
 │   ├── test_monotonic_clock.c   # pure conversion + monotonicity checks
 │   └── test_token_bucket.c      # deterministic policy checks
@@ -126,6 +139,39 @@ Time values must come from the same monotonic time source.
 structure. Do not share one instance between threads without synchronization.
 A later phase will replace the representation with an atomic concurrency model.
 
+
+## C11 atomic teaching lab (Phase 5)
+
+`atomic_counter_increment_bounded()` performs a load and CAS retry loop with
+`memory_order_relaxed`. It enforces a single numerical invariant (the counter
+never exceeds its limit) and **does not** publish other memory. The successful
+CAS is its linearization point. A weak CAS can fail spuriously, so the loop
+retries using the updated expected value. The counter cannot overflow even if
+the limit is `UINT_FAST64_MAX` because `observed + 1` is attempted only when
+`observed < limit`.
+
+`atomic_mailbox_publish_once()` writes a plain `uint64_t` payload before a
+`memory_order_release` store to `published`. Readers perform a
+`memory_order_acquire` load of that flag before reading the payload. The
+release/acquire synchronization establishes a happens-before relation for the
+payload. The mailbox deliberately supports **one publisher, one publication,
+and any number of readers**, after correct initialization. Concurrent second
+writes, resetting the ready flag, or destroying the object while readers run
+would violate the contract.
+
+`atomic_is_lock_free()` reports whether the atomic counter is lock-free on the
+current platform; C11 atomic types are **not** universally guaranteed to be
+lock-free. No blanket lock-free project claim should be made yet.
+
+```bash
+make atomic-demo
+make atomic-test
+```
+
+The lab is kept separate from the existing sequential `token_bucket_t` because
+atomically updating one numeric counter does **not** yet solve the two-field
+(tokens + refill timestamp) consistency problem of a concurrent token bucket.
+
 ## Further verification (Linux)
 
 ```bash
@@ -135,4 +181,4 @@ make clean && make CFLAGS='-std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fsa
 make clean && make test
 ```
 
-The learning PDF for this milestone lives **outside** the Git repository.
+The Phase 5 learning PDF lives **outside** the Git repository.

@@ -10,14 +10,19 @@ TARGET := $(BUILD_DIR)/ratelimiter
 BUCKET_TEST := $(BUILD_DIR)/test_token_bucket
 CLOCK_TEST := $(BUILD_DIR)/test_monotonic_clock
 PROPERTIES_TEST := $(BUILD_DIR)/test_bucket_properties
+ATOMIC_TEST := $(BUILD_DIR)/test_atomic_lab
+ATOMIC_DEMO := $(BUILD_DIR)/atomic_lab_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
 BUCKET_TEST_SOURCES := tests/test_token_bucket.c src/token_bucket.c
 CLOCK_TEST_SOURCES := tests/test_monotonic_clock.c src/monotonic_clock.c
 PROPERTIES_TEST_SOURCES := tests/test_bucket_properties.c src/token_bucket.c
+ATOMIC_LAB_SOURCES := src/atomic_lab.c
+ATOMIC_TEST_SOURCES := tests/test_atomic_lab.c $(ATOMIC_LAB_SOURCES)
+ATOMIC_DEMO_SOURCES := examples/atomic_lab_demo.c $(ATOMIC_LAB_SOURCES)
 
-.PHONY: all clean test unit-test properties-test smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -40,6 +45,12 @@ $(CLOCK_TEST): $(CLOCK_TEST_SOURCES) include/monotonic_clock.h | $(BUILD_DIR)
 $(PROPERTIES_TEST): $(PROPERTIES_TEST_SOURCES) include/token_bucket.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(PROPERTIES_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(ATOMIC_TEST): $(ATOMIC_TEST_SOURCES) include/atomic_lab.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(ATOMIC_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(ATOMIC_DEMO): $(ATOMIC_DEMO_SOURCES) include/atomic_lab.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(ATOMIC_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -56,10 +67,16 @@ unit-test: $(BUCKET_TEST) $(CLOCK_TEST)
 properties-test: $(PROPERTIES_TEST)
 	./$(PROPERTIES_TEST)
 
+atomic-test: $(ATOMIC_TEST)
+	./$(ATOMIC_TEST)
+
+atomic-demo: $(ATOMIC_DEMO)
+	./$(ATOMIC_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test smoke-test
+test: unit-test properties-test atomic-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -72,5 +89,7 @@ help:
 	  'make unit-test   Run token-bucket and monotonic-clock C tests' \
 	  'make properties-test   Run deterministic reference-model checks' \
 	  'make smoke-test  Check the CLI behavior' \
-	  'make test        Run all Phase 4 tests' \
+	  'make atomic-test Run pthread contention + release/acquire tests' \
+	  'make atomic-demo Run the bounded-CAS learning demo' \
+	  'make test        Run all Phase 5 tests' \
 	  'make clean       Remove generated build artifacts'

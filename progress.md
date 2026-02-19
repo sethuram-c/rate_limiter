@@ -120,3 +120,35 @@ Status: complete
 Introduce self-contained C11 atomic operations experiments. The sequential
 bucket intentionally remains not thread-safe until the concurrency design
 and state representation are established.
+
+## Phase 5 - C11 atomics, compare-and-swap, and publication
+
+Status: complete
+
+### Added
+
+- `include/atomic_lab.h` and `src/atomic_lab.c` as an isolated educational module
+- bounded CAS counter using `atomic_uint_fast64_t` and relaxed memory ordering
+- one-shot mailbox demonstrating release/acquire synchronization
+- contention test with 6 pthread workers, 120,000 attempts and a limit of 50,000
+- one-publisher / six-reader payload publication test
+- `atomic_is_lock_free` diagnostic and an executable teaching demo
+- `make atomic-test` and `make atomic-demo`, integrated into `make test`
+- updated README explaining what is and is not thread-safe
+
+### Acceptance criteria
+
+- all earlier deterministic bucket, clock, model, and CLI tests still pass
+- CAS increments cannot overshoot the configured limit, even with contention
+- the CAS loop tolerates weak compare-exchange failure and uses valid failure ordering
+- a successful CAS is the counter increment's linearization point
+- acquire readers observe the single writer's initialized payload
+- the counter's lock-free status is queried rather than assumed
+- GCC and Clang clean builds pass strict warnings
+- the learning PDF and build files remain outside Git
+
+### Next phase
+
+Model exactly which token-bucket fields must change together before building a
+concurrent representation; distinguish linearizable accounting from timestamp
+publication and identify where a CAS state transition would linearize.
