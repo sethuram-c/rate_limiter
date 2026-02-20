@@ -152,3 +152,35 @@ Status: complete
 Model exactly which token-bucket fields must change together before building a
 concurrent representation; distinguish linearizable accounting from timestamp
 publication and identify where a CAS state transition would linearize.
+
+## Phase 6 - Packed concurrent-bucket state design
+
+Status: complete
+
+### Added
+
+- `include/bucket_state.h` and `src/bucket_state.c`: one-word packed state
+  encoding (48-bit monotonic milliseconds / 16-bit token balance)
+- pure transition planner that returns the proposed next snapshot and verdict
+- explicit policy, range, state and zero-request validation
+- safe whole-period refill, preservation of partial intervals, stale-time clamp
+- 24,000 deterministic transitions compared with the Phase 4 reference
+- tests for maximum packed timestamp, maximum token capacity and saturation
+- standalone packed-state demonstration and design explanation under docs/
+- `make state-test` and `make state-demo` integrated into existing Makefile
+
+### Acceptance criteria
+
+- packing and unpacking are exact at the 64-bit representable limits
+- tokens and timestamp are planned together, never as independent updates
+- malformed input leaves output parameters unchanged
+- ordinary rate limit denials are distinguished from invalid inputs
+- pure transitions agree with the sequential reference for 24,000 operations
+- all previous project tests and demos still pass with strict compiler flags
+- guide PDF stays outside the source repository
+
+### Next phase
+
+Implement an actual atomic bucket with a CAS retry loop that commits the
+complete packed state; test it under pthread contention and check lock-free
+capability on the target system. Do not claim thread safety before then.

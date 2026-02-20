@@ -11,18 +11,25 @@ The finished project is intended to demonstrate:
 - token-bucket rate limiting
 - Linux monotonic time and defensive integer conversion
 - atomic operations and memory ordering (C11 teaching lab in Phase 5)
+- packed multi-field state-transition design (Phase 6)
 - lock-free request-path design (future phases)
 - fixed-capacity concurrent hashing (future phases)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 5
+## Current status - Phase 6
 
-Phase 5 adds a **self-contained atomic teaching lab** rather than prematurely
-changing the bucket. It covers a CAS-based bounded counter (relaxed ordering),
-one-time payload publication (release/acquire ordering), pthread contention,
-and a runtime `atomic_is_lock_free` check. These examples are **not yet** the
-production rate limiter. The existing sequential token bucket is still **not
-thread-safe**, and per-IP routing has not been implemented.
+Phase 6 introduces a **packed state-transition design** for a future concurrent
+token bucket: 48 bits of monotonic milliseconds and 16 bits of token balance
+inside one `uint64_t`. A pure planner computes the next packed state and the
+allow/deny verdict, but does not mutate shared state or perform CAS yet.
+Its tests verify 24,000 transitions against the established sequential model.
+See `docs/concurrent_bucket_design.md` for explicit limits and the intended
+Phase 7 CAS linearization point.
+
+The Phase 5 atomic teaching lab is preserved. The existing sequential
+`token_bucket_t` is **not thread-safe**, and the packed-state module is a
+**single-threaded design model**, not a production concurrent bucket.
+Per-IP routing has not been implemented.
 
 Phase 4's boundary and reference-model testing remain intact.
 
@@ -65,6 +72,8 @@ make test       # C unit tests, reference-model test + shell smoke test
 make properties-test  # 48,000 deterministic reference comparisons
 make atomic-test      # CAS contention + release/acquire publication test
 make atomic-demo      # small runnable C11 atomics lesson
+make state-test       # 24,000 reference-model transition comparisons
+make state-demo       # packed state visualized as hex and fields
 ```
 
 Expected test output includes:
@@ -74,6 +83,7 @@ token bucket tests passed
 monotonic clock tests passed
 token bucket property tests passed: 48000 deterministic operations
 atomic lab tests passed: 6 writers, 50000 bounded increments, 6 publication readers
+bucket state tests passed: 24000 reference transitions
 smoke test passed: deterministic and live clock demos behave as expected
 ```
 
@@ -90,20 +100,26 @@ make CC=clang test
 ```text
 .
 ├── bench/                       # benchmarks arrive later
+├── docs/
+│   └── concurrent_bucket_design.md # Phase 6 design and planned CAS loop
 ├── examples/
-│   └── atomic_lab_demo.c        # runnable phase-5 experiments
+│   ├── atomic_lab_demo.c        # runnable phase-5 experiments
+│   └── bucket_state_demo.c      # Phase 6 packed-state demonstration
 ├── include/
 │   ├── atomic_lab.h             # CAS counter and release/acquire mailbox
+│   ├── bucket_state.h           # packed-state planner API
 │   ├── monotonic_clock.h        # Linux/POSIX time adapter API
 │   └── token_bucket.h           # deterministic bucket API
 ├── src/
 │   ├── atomic_lab.c             # educational C11 atomics module
+│   ├── bucket_state.c           # pure packed-state transition model
 │   ├── main.c                   # deterministic and live demos
 │   ├── monotonic_clock.c        # POSIX clock and safe conversion
 │   └── token_bucket.c           # sequential token-bucket policy
 ├── tests/
 │   ├── smoke.sh                 # end-to-end CLI checks
 │   ├── test_atomic_lab.c        # concurrent CAS and publication checks
+│   ├── test_bucket_state.c      # deterministic state model + reference
 │   ├── test_bucket_properties.c # 48,000 model-based operations
 │   ├── test_monotonic_clock.c   # pure conversion + monotonicity checks
 │   └── test_token_bucket.c      # deterministic policy checks
@@ -181,4 +197,24 @@ make clean && make CFLAGS='-std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fsa
 make clean && make test
 ```
 
-The Phase 5 learning PDF lives **outside** the Git repository.
+## Packed state-transition design (Phase 6)
+
+`bucket_state_initial()` starts the 16-bit token balance at capacity.
+`bucket_state_plan()` decodes an observed state, advances the refill anchor by
+whole intervals without overflow, caps the token balance, and decides whether
+the complete request can consume tokens. It returns a **proposed** next state.
+Even a rejected request can advance the refill timestamp and balance.
+
+This is **not** a thread-safe API; the planned Phase 7 algorithm will use a
+single CAS on the packed state. Millisecond precision intentionally differs
+from the existing nanosecond API; requests with sub-millisecond intervals
+are currently outside the model. Token balance is limited to 65,535.
+`bucket_state_plan()` returns false for malformed inputs and reports ordinary
+quota denials via `allowed=false`, avoiding error/deny ambiguity.
+
+```bash
+make state-test
+make state-demo
+```
+
+All phase learning PDFs live **outside** the Git repository.

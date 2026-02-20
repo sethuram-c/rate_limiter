@@ -12,6 +12,8 @@ CLOCK_TEST := $(BUILD_DIR)/test_monotonic_clock
 PROPERTIES_TEST := $(BUILD_DIR)/test_bucket_properties
 ATOMIC_TEST := $(BUILD_DIR)/test_atomic_lab
 ATOMIC_DEMO := $(BUILD_DIR)/atomic_lab_demo
+STATE_TEST := $(BUILD_DIR)/test_bucket_state
+STATE_DEMO := $(BUILD_DIR)/bucket_state_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -21,8 +23,11 @@ PROPERTIES_TEST_SOURCES := tests/test_bucket_properties.c src/token_bucket.c
 ATOMIC_LAB_SOURCES := src/atomic_lab.c
 ATOMIC_TEST_SOURCES := tests/test_atomic_lab.c $(ATOMIC_LAB_SOURCES)
 ATOMIC_DEMO_SOURCES := examples/atomic_lab_demo.c $(ATOMIC_LAB_SOURCES)
+STATE_MODEL_SOURCES := src/bucket_state.c
+STATE_TEST_SOURCES := tests/test_bucket_state.c $(STATE_MODEL_SOURCES) src/token_bucket.c
+STATE_DEMO_SOURCES := examples/bucket_state_demo.c $(STATE_MODEL_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -51,6 +56,12 @@ $(ATOMIC_TEST): $(ATOMIC_TEST_SOURCES) include/atomic_lab.h | $(BUILD_DIR)
 $(ATOMIC_DEMO): $(ATOMIC_DEMO_SOURCES) include/atomic_lab.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(ATOMIC_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(STATE_TEST): $(STATE_TEST_SOURCES) include/bucket_state.h include/token_bucket.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(STATE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
+$(STATE_DEMO): $(STATE_DEMO_SOURCES) include/bucket_state.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(STATE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -73,10 +84,16 @@ atomic-test: $(ATOMIC_TEST)
 atomic-demo: $(ATOMIC_DEMO)
 	./$(ATOMIC_DEMO)
 
+state-test: $(STATE_TEST)
+	./$(STATE_TEST)
+
+state-demo: $(STATE_DEMO)
+	./$(STATE_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test smoke-test
+test: unit-test properties-test atomic-test state-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -91,5 +108,7 @@ help:
 	  'make smoke-test  Check the CLI behavior' \
 	  'make atomic-test Run pthread contention + release/acquire tests' \
 	  'make atomic-demo Run the bounded-CAS learning demo' \
-	  'make test        Run all Phase 5 tests' \
+	  'make state-test  Validate packed-state transitions against reference' \
+	  'make state-demo  Display packed state and planned updates' \
+	  'make test        Run all Phase 6 tests' \
 	  'make clean       Remove generated build artifacts'
