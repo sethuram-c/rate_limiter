@@ -14,6 +14,8 @@ ATOMIC_TEST := $(BUILD_DIR)/test_atomic_lab
 ATOMIC_DEMO := $(BUILD_DIR)/atomic_lab_demo
 STATE_TEST := $(BUILD_DIR)/test_bucket_state
 STATE_DEMO := $(BUILD_DIR)/bucket_state_demo
+LOCKFREE_TEST := $(BUILD_DIR)/test_lockfree_bucket
+LOCKFREE_DEMO := $(BUILD_DIR)/lockfree_bucket_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -26,8 +28,11 @@ ATOMIC_DEMO_SOURCES := examples/atomic_lab_demo.c $(ATOMIC_LAB_SOURCES)
 STATE_MODEL_SOURCES := src/bucket_state.c
 STATE_TEST_SOURCES := tests/test_bucket_state.c $(STATE_MODEL_SOURCES) src/token_bucket.c
 STATE_DEMO_SOURCES := examples/bucket_state_demo.c $(STATE_MODEL_SOURCES)
+LOCKFREE_SOURCES := src/lockfree_bucket.c $(STATE_MODEL_SOURCES)
+LOCKFREE_TEST_SOURCES := tests/test_lockfree_bucket.c $(LOCKFREE_SOURCES)
+LOCKFREE_DEMO_SOURCES := examples/lockfree_bucket_demo.c $(LOCKFREE_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -62,6 +67,12 @@ $(STATE_TEST): $(STATE_TEST_SOURCES) include/bucket_state.h include/token_bucket
 $(STATE_DEMO): $(STATE_DEMO_SOURCES) include/bucket_state.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(STATE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(LOCKFREE_TEST): $(LOCKFREE_TEST_SOURCES) include/lockfree_bucket.h include/bucket_state.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(LOCKFREE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(LOCKFREE_DEMO): $(LOCKFREE_DEMO_SOURCES) include/lockfree_bucket.h include/bucket_state.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LOCKFREE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -90,10 +101,16 @@ state-test: $(STATE_TEST)
 state-demo: $(STATE_DEMO)
 	./$(STATE_DEMO)
 
+lockfree-test: $(LOCKFREE_TEST)
+	./$(LOCKFREE_TEST)
+
+lockfree-demo: $(LOCKFREE_DEMO)
+	./$(LOCKFREE_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -110,5 +127,7 @@ help:
 	  'make atomic-demo Run the bounded-CAS learning demo' \
 	  'make state-test  Validate packed-state transitions against reference' \
 	  'make state-demo  Display packed state and planned updates' \
-	  'make test        Run all Phase 6 tests' \
+	  'make lockfree-test Run pthread CAS bucket tests' \
+	  'make lockfree-demo Show live atomic bucket decisions' \
+	  'make test        Run all Phase 7 tests' \
 	  'make clean       Remove generated build artifacts'

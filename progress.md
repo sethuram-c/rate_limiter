@@ -184,3 +184,36 @@ Status: complete
 Implement an actual atomic bucket with a CAS retry loop that commits the
 complete packed state; test it under pthread contention and check lock-free
 capability on the target system. Do not claim thread safety before then.
+
+## Phase 7 - Lock-free token bucket using atomic CAS
+
+Status: complete
+
+### Added
+
+- `include/lockfree_bucket.h` and `src/lockfree_bucket.c`: fixed-policy
+  lock-free token bucket that atomically commits a Phase 6 state transition
+- runtime 64-bit atomic lock-free check before accepting initialization
+- weak CAS retry loop with relaxed ordering and full transition recomputation
+- separate return values for invalid operation versus ordinary quota denial
+- coherent atomic snapshot utility and explanatory architecture document
+- eight-thread contention tests (800,000 total attempts), zero-overspend
+  assertions, batch atomicity, refill, stale time, and packed maximum limits
+- reproducible demonstration executable and Makefile integration
+
+### Acceptance criteria
+
+- one successful CAS commits the entire token/refill state
+- a failed CAS retries with the refreshed actual state, not a stale plan
+- no token overdraft with eight simultaneous pthread workers
+- simultaneous three-token requests can only claim a whole three tokens
+- denied calls and snapshots have coherent atomic observations
+- stale timestamps never reverse the stored refill anchor
+- initialization rejects invalid policy and non-lock-free atomic targets
+- all earlier Phase 1-6 functionality still builds and passes tests
+- separate learning guide never enters the repository
+
+### Next phase
+
+Investigate contention fairness, linearizability test techniques and
+thread-sanitizer coverage before integrating per-IP hash table storage.

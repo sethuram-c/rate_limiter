@@ -218,3 +218,25 @@ make state-demo
 ```
 
 All phase learning PDFs live **outside** the Git repository.
+
+## Lock-free single-bucket implementation (Phase 7)
+
+`include/lockfree_bucket.h` + `src/lockfree_bucket.c` implement a real
+concurrent token bucket by retrying a single-word C11 compare-exchange around
+the pure state transition from Phase 6. The logical state (tokens plus refill
+anchor) is updated indivisibly. This implementation is **not** yet a per-IP
+rate limiter: it manages one shared bucket. `lf_bucket_init()` rejects targets
+where its 64-bit atomic state is not reported lock-free.
+
+A successful `lf_bucket_try_consume()` API call returns true and writes a
+separate `allowed` decision; false means invalid input, not rate-limit denial.
+Only initialization and shutdown may touch the policy/lifetime; both must
+occur outside any concurrent worker activity. Workers supply timestamps in
+monotonic milliseconds. See `docs/lockfree_bucket_correctness.md` for the
+linearization argument, relaxed-memory-order rationale and limitations.
+
+```sh
+make lockfree-test   # 800,000 multithreaded requests including batch tests
+make lockfree-demo   # print decisions + current coherent snapshots
+make test            # includes all previous phases
+```
