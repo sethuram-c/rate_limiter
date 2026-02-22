@@ -18,10 +18,12 @@ bool lf_bucket_init(lf_bucket_t *bucket, const bucket_policy_t *policy,
     return atomic_is_lock_free(&bucket->state);
 }
 
-bool lf_bucket_try_consume(lf_bucket_t *bucket, uint32_t amount,
-                           uint64_t now_ms, bool *allowed)
+static bool try_consume_impl(lf_bucket_t *bucket, uint32_t amount,
+                             uint64_t now_ms, bool *allowed,
+                             uint64_t *cas_attempts)
 {
     uint64_t observed;
+    uint64_t attempts = 0U;
 
     if (bucket == NULL || allowed == NULL || amount == 0U ||
         now_ms > BUCKET_STATE_MAX_TIME_MS) {
@@ -37,19 +39,34 @@ bool lf_bucket_try_consume(lf_bucket_t *bucket, uint32_t amount,
             return false;
         }
 
-        /*
-         * On failure, C11 rewrites observed with the current state.
-         * Never use a stale candidate after losing the CAS race.
-         * Relaxed ordering suffices: the entire mutable logical state is
-         * this one atomic object; policy is immutable and pre-published.
-         */
+        /* Every failed CAS refreshes observed and invalidates the old plan. */
+        ++attempts;
         if (atomic_compare_exchange_weak_explicit(
                 &bucket->state, &observed, candidate.next_state,
                 memory_order_relaxed, memory_order_relaxed)) {
             *allowed = candidate.allowed;
+            if (cas_attempts != NULL) {
+                *cas_attempts = attempts;
+            }
             return true;
         }
     }
+}
+
+bool lf_bucket_try_consume(lf_bucket_t *bucket, uint32_t amount,
+                           uint64_t now_ms, bool *allowed)
+{
+    return try_consume_impl(bucket, amount, now_ms, allowed, NULL);
+}
+
+bool lf_bucket_try_consume_profiled(lf_bucket_t *bucket, uint32_t amount,
+                                    uint64_t now_ms, bool *allowed,
+                                    uint64_t *cas_attempts)
+{
+    if (cas_attempts == NULL) {
+        return false;
+    }
+    return try_consume_impl(bucket, amount, now_ms, allowed, cas_attempts);
 }
 
 bool lf_bucket_snapshot(const lf_bucket_t *bucket, uint64_t *anchor_ms,

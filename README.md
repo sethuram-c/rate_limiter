@@ -240,3 +240,25 @@ make lockfree-test   # 800,000 multithreaded requests including batch tests
 make lockfree-demo   # print decisions + current coherent snapshots
 make test            # includes all previous phases
 ```
+
+## Phase 8: contention stress and bounded linearizability
+
+Run `make contention-test` (also part of `make test`). The profiling variant
+`lf_bucket_try_consume_profiled` reports **CAS attempts**, so retries are
+`total_cas_attempts - total_calls`. Denial is a policy decision, not a CAS
+failure. Retry counts vary across machines, compilers and scheduler decisions;
+never assert a particular number of retries.
+
+The suite repeats an eight-thread 96,000-request stress round ten times
+(960,000 requests), checks exact admissions under zero refill, and checks 100
+eight-operation concurrent histories (mixed 1000/2000 ms timestamps and
+1-/2-token requests) with an exhaustive bounded serial-order
+checker. The checker enforces response-before-invocation precedence, matches
+request results and the final packed state, and rejects fabricated impossible
+histories. This is evidence, **not** a general proof of linearizability or
+wait-freedom. The oracle intentionally shares the Phase 6 pure transition model,
+so model-level mistakes still require independent specification tests.
+
+For sanitizer experiments see `docs/contention_validation.md`; do not combine
+ThreadSanitizer with AddressSanitizer. Tested/verified outcomes should be
+recorded honestly on your machine; retry counts are not a performance score.

@@ -16,6 +16,7 @@ STATE_TEST := $(BUILD_DIR)/test_bucket_state
 STATE_DEMO := $(BUILD_DIR)/bucket_state_demo
 LOCKFREE_TEST := $(BUILD_DIR)/test_lockfree_bucket
 LOCKFREE_DEMO := $(BUILD_DIR)/lockfree_bucket_demo
+CONTENTION_TEST := $(BUILD_DIR)/test_contention
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -31,8 +32,9 @@ STATE_DEMO_SOURCES := examples/bucket_state_demo.c $(STATE_MODEL_SOURCES)
 LOCKFREE_SOURCES := src/lockfree_bucket.c $(STATE_MODEL_SOURCES)
 LOCKFREE_TEST_SOURCES := tests/test_lockfree_bucket.c $(LOCKFREE_SOURCES)
 LOCKFREE_DEMO_SOURCES := examples/lockfree_bucket_demo.c $(LOCKFREE_SOURCES)
+CONTENTION_TEST_SOURCES := tests/test_contention.c tests/linearizability_check.c $(LOCKFREE_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -73,6 +75,9 @@ $(LOCKFREE_TEST): $(LOCKFREE_TEST_SOURCES) include/lockfree_bucket.h include/buc
 $(LOCKFREE_DEMO): $(LOCKFREE_DEMO_SOURCES) include/lockfree_bucket.h include/bucket_state.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LOCKFREE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(CONTENTION_TEST): $(CONTENTION_TEST_SOURCES) tests/linearizability_check.h include/lockfree_bucket.h include/bucket_state.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(CONTENTION_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -107,10 +112,13 @@ lockfree-test: $(LOCKFREE_TEST)
 lockfree-demo: $(LOCKFREE_DEMO)
 	./$(LOCKFREE_DEMO)
 
+contention-test: $(CONTENTION_TEST)
+	./$(CONTENTION_TEST)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -129,5 +137,6 @@ help:
 	  'make state-demo  Display packed state and planned updates' \
 	  'make lockfree-test Run pthread CAS bucket tests' \
 	  'make lockfree-demo Show live atomic bucket decisions' \
-	  'make test        Run all Phase 7 tests' \
+	  'make contention-test Profile CAS retries + check concurrent histories' \
+	  'make test        Run all Phase 8 tests' \
 	  'make clean       Remove generated build artifacts'

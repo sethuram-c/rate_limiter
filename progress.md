@@ -217,3 +217,31 @@ Status: complete
 
 Investigate contention fairness, linearizability test techniques and
 thread-sanitizer coverage before integrating per-IP hash table storage.
+
+## Phase 8 - Contention analysis and bounded linearizability
+
+Status: complete
+
+### Added
+
+- Optional per-call CAS-attempt instrumentation without global counter sharing
+- Eight-worker, ten-round reproducible stress schedule (960,000 calls)
+- Admission counts, denial counts, CAS retries and max-attempt reports
+- Bounded exhaustive history checker enforcing happens-before constraints
+- 100 real concurrent eight-operation traces, with mixed timestamps and amounts
+- Negative controls rejecting impossible over-admissions and final states
+- Documentation and `make contention-test`, integrated into `make test`
+
+### Acceptance criteria
+
+- No tokens are overspent across 960,000 attempts at a fixed timestamp
+- Counters satisfy total attempts = admitted + denied
+- Successful operations report at least one CAS attempt
+- Negative fabricated histories are rejected, real test histories accepted
+- All existing tests remain green under GCC and Clang strict builds
+- PDFs and build artifacts remain outside the Git repository
+
+### Next phase
+
+Design the fixed-capacity per-IP hash table; define safe initialization and
+key-publishing semantics before implementing concurrent slot claims.

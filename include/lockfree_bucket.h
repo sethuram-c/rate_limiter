@@ -39,6 +39,17 @@ bool lf_bucket_init(lf_bucket_t *bucket, const bucket_policy_t *policy,
 bool lf_bucket_try_consume(lf_bucket_t *bucket, uint32_t amount,
                            uint64_t now_ms, bool *allowed);
 
+/*
+ * Profiling variant for testing/benchmark experiments.
+ * On success, *cas_attempts is the number of compare-exchange attempts for
+ * this call (>= 1). On invalid input, both outputs remain unchanged.
+ * The ordinary API remains available and incurs no instrumentation contract.
+ * Count CAS failures as attempts - 1, not as denied requests.
+ */
+bool lf_bucket_try_consume_profiled(lf_bucket_t *bucket, uint32_t amount,
+                                    uint64_t now_ms, bool *allowed,
+                                    uint64_t *cas_attempts);
+
 /* A coherent observation of both fields; no synchronization of other data. */
 bool lf_bucket_snapshot(const lf_bucket_t *bucket, uint64_t *anchor_ms,
                         uint16_t *tokens);
