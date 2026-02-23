@@ -245,3 +245,35 @@ Status: complete
 
 Design the fixed-capacity per-IP hash table; define safe initialization and
 key-publishing semantics before implementing concurrent slot claims.
+
+## Phase 9 - Fixed-capacity per-IP hash-table design
+
+Status: complete (sequential reference model, not concurrent insertion)
+
+### Added
+
+- `include/ip_table_plan.h`, `src/ip_table_plan.c`: deterministic IPv4 hash,
+  nonzero power-of-two capacity checks, bounded linear probing
+- Explicit separate occupancy flag, so 0 and UINT32_MAX remain valid keys
+- `IP_PROBE_FOUND`, `IP_PROBE_EMPTY`, `IP_PROBE_FULL` result semantics
+- Idempotent sequential insertion with independent insert status
+- Forced collision/wraparound tests, full-table/duplicate-key tests, invalid
+  argument tests, and 60,000 deterministic reference-model operations
+- Standalone demonstration, Makefile targets, and hash-table design document
+
+### Acceptance criteria
+
+- Same IP always hashes to the same start slot for a given table capacity
+- Every probe scans at most `capacity` slots and wraps correctly
+- Duplicate insertion reuses the existing slot without growing occupancy
+- All 32-bit IPv4 keys are representable, including 0 and UINT32_MAX
+- Full-table condition is explicit and does not overwrite existing entries
+- Out parameters remain unchanged on invalid calls
+- GCC and Clang strict builds and previous-phase tests pass
+- Phase learning guide and compiled artifacts stay outside Git
+
+### Next phase
+
+Implement atomic slot publication and deduplicated concurrent lookup/insertion;
+make memory management and whether insertion itself qualifies as lock-free
+explicit. Never mutate the sequential reference-model slots concurrently.

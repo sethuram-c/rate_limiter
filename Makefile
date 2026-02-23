@@ -17,6 +17,8 @@ STATE_DEMO := $(BUILD_DIR)/bucket_state_demo
 LOCKFREE_TEST := $(BUILD_DIR)/test_lockfree_bucket
 LOCKFREE_DEMO := $(BUILD_DIR)/lockfree_bucket_demo
 CONTENTION_TEST := $(BUILD_DIR)/test_contention
+IP_PLAN_TEST := $(BUILD_DIR)/test_ip_table_plan
+IP_PLAN_DEMO := $(BUILD_DIR)/ip_table_plan_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -33,8 +35,11 @@ LOCKFREE_SOURCES := src/lockfree_bucket.c $(STATE_MODEL_SOURCES)
 LOCKFREE_TEST_SOURCES := tests/test_lockfree_bucket.c $(LOCKFREE_SOURCES)
 LOCKFREE_DEMO_SOURCES := examples/lockfree_bucket_demo.c $(LOCKFREE_SOURCES)
 CONTENTION_TEST_SOURCES := tests/test_contention.c tests/linearizability_check.c $(LOCKFREE_SOURCES)
+IP_PLAN_SOURCES := src/ip_table_plan.c
+IP_PLAN_TEST_SOURCES := tests/test_ip_table_plan.c $(IP_PLAN_SOURCES)
+IP_PLAN_DEMO_SOURCES := examples/ip_table_plan_demo.c $(IP_PLAN_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -78,6 +83,12 @@ $(LOCKFREE_DEMO): $(LOCKFREE_DEMO_SOURCES) include/lockfree_bucket.h include/buc
 $(CONTENTION_TEST): $(CONTENTION_TEST_SOURCES) tests/linearizability_check.h include/lockfree_bucket.h include/bucket_state.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(CONTENTION_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
 
+$(IP_PLAN_TEST): $(IP_PLAN_TEST_SOURCES) include/ip_table_plan.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_PLAN_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
+$(IP_PLAN_DEMO): $(IP_PLAN_DEMO_SOURCES) include/ip_table_plan.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_PLAN_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -115,10 +126,16 @@ lockfree-demo: $(LOCKFREE_DEMO)
 contention-test: $(CONTENTION_TEST)
 	./$(CONTENTION_TEST)
 
+ip-plan-test: $(IP_PLAN_TEST)
+	./$(IP_PLAN_TEST)
+
+ip-plan-demo: $(IP_PLAN_DEMO)
+	./$(IP_PLAN_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -138,5 +155,7 @@ help:
 	  'make lockfree-test Run pthread CAS bucket tests' \
 	  'make lockfree-demo Show live atomic bucket decisions' \
 	  'make contention-test Profile CAS retries + check concurrent histories' \
-	  'make test        Run all Phase 8 tests' \
+	  'make ip-plan-test  Test Phase 9 sequential hash-table model' \
+	  'make ip-plan-demo  Show collision/duplicate behavior' \
+	  'make test        Run all Phase 9 tests' \
 	  'make clean       Remove generated build artifacts'

@@ -16,37 +16,26 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent hashing (future phases)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 6
+## Current status - Phase 9
 
-Phase 6 introduces a **packed state-transition design** for a future concurrent
-token bucket: 48 bits of monotonic milliseconds and 16 bits of token balance
-inside one `uint64_t`. A pure planner computes the next packed state and the
-allow/deny verdict, but does not mutate shared state or perform CAS yet.
-Its tests verify 24,000 transitions against the established sequential model.
-See `docs/concurrent_bucket_design.md` for explicit limits and the intended
-Phase 7 CAS linearization point.
+Phase 9 defines and tests a **sequential reference model** for a fixed-capacity
+per-IPv4-key hash table. It uses a power-of-two capacity, deterministic 32-bit
+hash mixing, and linear probing. It preserves all 32-bit IPv4 values, including
+`0.0.0.0` and `255.255.255.255`, without using either as an empty sentinel.
+The model explicitly reports existing key, first empty slot, and table full.
 
-The Phase 5 atomic teaching lab is preserved. The existing sequential
-`token_bucket_t` is **not thread-safe**, and the packed-state module is a
-**single-threaded design model**, not a production concurrent bucket.
-Per-IP routing has not been implemented.
+**This is NOT a concurrent hash table yet.** Phase 7's single-bucket primitive
+is lock-free on supported atomic platforms, but the table model uses plain
+non-atomic fields and must not be shared with concurrent writers. Phase 10
+will implement an atomic per-IP index with safe publication; its progress and
+memory-allocation guarantees must be evaluated separately.
 
-Phase 4's boundary and reference-model testing remain intact.
+Existing components remain intact: the sequential nanosecond token bucket,
+Linux monotonic clock adapter, C11 atomics lab, packed-state model, CAS-based
+single-bucket implementation, and Phase 8 contention/linearizability tests.
 
-The bucket starts full, consumes one or more tokens per permitted request, refills
-one token per complete configured interval, and never exceeds capacity. Callers
-provide `now_ns`, so unit tests can simulate timestamps without sleeping.
-
-The clock module:
-
-- reads `clock_gettime(CLOCK_MONOTONIC, ...)` for elapsed-time accounting;
-- converts seconds/nanoseconds into `uint64_t` nanoseconds;
-- rejects invalid `timespec` values and conversion overflow;
-- returns explicit status and does not overwrite outputs on failure.
-
-`CLOCK_MONOTONIC` values are **not Unix timestamps**. On Linux, this clock normally
-does not include time while the system is suspended; that distinction may
-matter for future rate-limit policy decisions.
+See `docs/ip_table_design.md` for collision invariants, publication pitfalls,
+fixed-capacity trade-offs, and the planned concurrency protocol.
 
 ## Requirements
 
@@ -74,6 +63,10 @@ make atomic-test      # CAS contention + release/acquire publication test
 make atomic-demo      # small runnable C11 atomics lesson
 make state-test       # 24,000 reference-model transition comparisons
 make state-demo       # packed state visualized as hex and fields
+make lockfree-test    # Phase 7 concurrent CAS bucket tests
+make contention-test  # Phase 8 CAS contention and bounded history checks
+make ip-plan-test     # Phase 9 sequential per-IP hash-table model
+make ip-plan-demo     # Phase 9 probe/collision demonstration
 ```
 
 Expected test output includes:
@@ -262,3 +255,23 @@ so model-level mistakes still require independent specification tests.
 For sanitizer experiments see `docs/contention_validation.md`; do not combine
 ThreadSanitizer with AddressSanitizer. Tested/verified outcomes should be
 recorded honestly on your machine; retry counts are not a performance score.
+
+## Phase 9: fixed-capacity IPv4 index reference model
+
+`include/ip_table_plan.h` defines the non-concurrent semantics we will preserve
+when introducing atomic slots: consistent hashing, linear probing, first-empty
+termination, duplicate-key idempotence, wraparound, and a full-table signal.
+The model holds an explicit `occupied` flag, so **all 2^32 IPv4 keys are valid**.
+Capacity must be nonzero and a power of two; a full scan is bounded to
+`capacity` inspected slots. Keys are canonical network addresses represented
+as `uint32_t`, not raw string or host-specific pointer identities.
+
+The model is intentionally **not** presented as lock-free. A future concurrent
+implementation cannot safely publish a key before completing the associated
+bucket initialization unless it has a correct reservation/helping protocol.
+
+```sh
+make ip-plan-test   # 60,000 deterministic operations against an independent set
+make ip-plan-demo   # shows inserts, duplicates and slot count
+make test           # all prior tests plus Phase 9
+```
