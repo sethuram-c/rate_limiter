@@ -12,30 +12,31 @@ The finished project is intended to demonstrate:
 - Linux monotonic time and defensive integer conversion
 - atomic operations and memory ordering (C11 teaching lab in Phase 5)
 - packed multi-field state-transition design (Phase 6)
-- lock-free request-path design (future phases)
-- fixed-capacity concurrent hashing (future phases)
+- lock-free single-token-bucket CAS request processing (Phase 7)
+- fixed-capacity concurrent IPv4 hashing (Phase 10)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 9
+## Current status - Phase 10
 
-Phase 9 defines and tests a **sequential reference model** for a fixed-capacity
-per-IPv4-key hash table. It uses a power-of-two capacity, deterministic 32-bit
-hash mixing, and linear probing. It preserves all 32-bit IPv4 values, including
-`0.0.0.0` and `255.255.255.255`, without using either as an empty sentinel.
-The model explicitly reports existing key, first empty slot, and table full.
+Phase 10 implements a **concurrent, insertion-only IPv4 key index** using a
+fixed-capacity open-addressed hash table. Each slot stores a tagged IPv4 key
+in a C11 atomic 64-bit word; a successful CAS publishes one key exactly once.
+Concurrent lookups and same-key insertions are deduplicated. All IPv4 values
+remain valid, and a full table reports `IP_ATOMIC_FULL`.
 
-**This is NOT a concurrent hash table yet.** Phase 7's single-bucket primitive
-is lock-free on supported atomic platforms, but the table model uses plain
-non-atomic fields and must not be shared with concurrent writers. Phase 10
-will implement an atomic per-IP index with safe publication; its progress and
-memory-allocation guarantees must be evaluated separately.
+The index allocates its atomic slot array **before** worker threads start, so
+normal lookup/insertion paths do not allocate. It checks that 64-bit slot
+atomics are lock-free on the actual platform. `memory_order_seq_cst` keeps the
+cross-slot probe reasoning conservative and auditable.
 
-Existing components remain intact: the sequential nanosecond token bucket,
-Linux monotonic clock adapter, C11 atomics lab, packed-state model, CAS-based
-single-bucket implementation, and Phase 8 contention/linearizability tests.
+**Not yet the finished per-IP rate limiter:** published entries contain only
+keys and indices, not token buckets. The existing Phase 7 lock-free token
+bucket is separate. Phase 11 will attach safely initialized buckets; bucket
+fields must never be initialized after publishing their key to other threads.
+No resizing, deletion or reclamation while worker threads are active.
 
-See `docs/ip_table_design.md` for collision invariants, publication pitfalls,
-fixed-capacity trade-offs, and the planned concurrency protocol.
+See `docs/atomic_ip_table_correctness.md` for invariants, memory-order
+reasoning, bounded progress, lifecycle constraints and known limitations.
 
 ## Requirements
 
@@ -67,6 +68,8 @@ make lockfree-test    # Phase 7 concurrent CAS bucket tests
 make contention-test  # Phase 8 CAS contention and bounded history checks
 make ip-plan-test     # Phase 9 sequential per-IP hash-table model
 make ip-plan-demo     # Phase 9 probe/collision demonstration
+make ip-atomic-test    # Phase 10 concurrent insertion/lookup tests
+make ip-atomic-demo    # Phase 10 tagged key/atomic publication demo
 ```
 
 Expected test output includes:
@@ -275,3 +278,17 @@ make ip-plan-test   # 60,000 deterministic operations against an independent set
 make ip-plan-demo   # shows inserts, duplicates and slot count
 make test           # all prior tests plus Phase 9
 ```
+
+## Phase 10: concurrent IPv4 key index
+
+```bash
+make ip-atomic-test
+make ip-atomic-demo
+make test
+```
+
+The pthread stress test executes 204,800 insert-or-find calls over 128
+unique keys and ensures exactly one successful insertion per IP. A concurrent
+full-table test admits exactly 16 unique keys to a 16-slot table and reports
+FULL for the other eight. This is a bounded concurrent key index, not yet a
+per-IP rate-limiter admission function.

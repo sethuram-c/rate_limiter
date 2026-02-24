@@ -277,3 +277,33 @@ Status: complete (sequential reference model, not concurrent insertion)
 Implement atomic slot publication and deduplicated concurrent lookup/insertion;
 make memory management and whether insertion itself qualifies as lock-free
 explicit. Never mutate the sequential reference-model slots concurrently.
+
+## Phase 10 - Concurrent IPv4 key index
+
+Status: complete (key table only; per-IP bucket integration is Phase 11)
+
+### Added
+
+- `ip_atomic_table`: fixed-capacity, insert-only open-addressed IPv4 index
+- Atomic tagged 64-bit slots supporting every IPv4 key, including 0 and UINT32_MAX
+- Strong-CAS publication, duplicate-key deduplication, bounded probes
+- Conservative sequential-consistency ordering across probe chains
+- Preallocated slots and `atomic_is_lock_free` capability checks
+- Concurrent pthread tests: 204,800 operations on 128 keys, 24-way table fill
+- New demo, Makefile targets and correctness/lifetime documentation
+
+### Acceptance criteria
+
+- Exactly 128 INSERTED results across 204,800 shared-key operations
+- Exactly 16 INSERTED and 8 FULL in 24-way saturation test
+- No duplicate slots for an IPv4 key; stable lookup after thread join
+- Table never permits mutation, deletion, or reclamation during use
+- All old phase tests pass under strict GCC and Clang builds
+- Personal learning PDF and generated build artifacts remain outside Git
+
+### Next phase
+
+Associate a fully initialized lock-free token bucket with each published IP
+without ever exposing partially initialized state. Keep the table lifecycle
+rules and avoid false claims about lock-free allocation or general-purpose
+resizing.

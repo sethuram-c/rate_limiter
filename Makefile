@@ -19,6 +19,8 @@ LOCKFREE_DEMO := $(BUILD_DIR)/lockfree_bucket_demo
 CONTENTION_TEST := $(BUILD_DIR)/test_contention
 IP_PLAN_TEST := $(BUILD_DIR)/test_ip_table_plan
 IP_PLAN_DEMO := $(BUILD_DIR)/ip_table_plan_demo
+IP_ATOMIC_TEST := $(BUILD_DIR)/test_ip_atomic_table
+IP_ATOMIC_DEMO := $(BUILD_DIR)/ip_atomic_table_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -38,8 +40,11 @@ CONTENTION_TEST_SOURCES := tests/test_contention.c tests/linearizability_check.c
 IP_PLAN_SOURCES := src/ip_table_plan.c
 IP_PLAN_TEST_SOURCES := tests/test_ip_table_plan.c $(IP_PLAN_SOURCES)
 IP_PLAN_DEMO_SOURCES := examples/ip_table_plan_demo.c $(IP_PLAN_SOURCES)
+IP_ATOMIC_SOURCES := src/ip_atomic_table.c $(IP_PLAN_SOURCES)
+IP_ATOMIC_TEST_SOURCES := tests/test_ip_atomic_table.c $(IP_ATOMIC_SOURCES)
+IP_ATOMIC_DEMO_SOURCES := examples/ip_atomic_table_demo.c $(IP_ATOMIC_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -89,6 +94,12 @@ $(IP_PLAN_TEST): $(IP_PLAN_TEST_SOURCES) include/ip_table_plan.h | $(BUILD_DIR)
 $(IP_PLAN_DEMO): $(IP_PLAN_DEMO_SOURCES) include/ip_table_plan.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_PLAN_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(IP_ATOMIC_TEST): $(IP_ATOMIC_TEST_SOURCES) include/ip_atomic_table.h include/ip_table_plan.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(IP_ATOMIC_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(IP_ATOMIC_DEMO): $(IP_ATOMIC_DEMO_SOURCES) include/ip_atomic_table.h include/ip_table_plan.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_ATOMIC_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -132,10 +143,16 @@ ip-plan-test: $(IP_PLAN_TEST)
 ip-plan-demo: $(IP_PLAN_DEMO)
 	./$(IP_PLAN_DEMO)
 
+ip-atomic-test: $(IP_ATOMIC_TEST)
+	./$(IP_ATOMIC_TEST)
+
+ip-atomic-demo: $(IP_ATOMIC_DEMO)
+	./$(IP_ATOMIC_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -157,5 +174,7 @@ help:
 	  'make contention-test Profile CAS retries + check concurrent histories' \
 	  'make ip-plan-test  Test Phase 9 sequential hash-table model' \
 	  'make ip-plan-demo  Show collision/duplicate behavior' \
-	  'make test        Run all Phase 9 tests' \
+	  'make ip-atomic-test Test CAS per-IP insertion under contention' \
+	  'make ip-atomic-demo Show atomic publication demo' \
+	  'make test        Run all Phase 10 tests' \
 	  'make clean       Remove generated build artifacts'
