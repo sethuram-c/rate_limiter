@@ -307,3 +307,34 @@ Associate a fully initialized lock-free token bucket with each published IP
 without ever exposing partially initialized state. Keep the table lifecycle
 rules and avoid false claims about lock-free allocation or general-purpose
 resizing.
+
+## Phase 11 - Per-IP lock-free bucket integration
+
+Status: complete (library-level per-IP rate limiting; not a network service)
+
+### Added
+
+- `ip_rate_limiter_t`, a composition of the atomic IPv4 key index and an
+  independently initialized `lf_bucket_t` for each physical slot
+- Pre-initialization of all bucket payloads **before** threads may claim keys,
+  removing the race between key publication and bucket construction
+- Allocation-free concurrent decision API with explicit ALLOWED, DENIED,
+  TABLE_FULL and INVALID results
+- Snapshot helper, deterministic demonstration, make targets and lifecycle doc
+- 12-thread tests: 90,000 requests for one IP, 76,800 over 64 IPs
+
+### Acceptance criteria
+
+- 173 admissions for one-IP overload; 2,368 for 64-IP overload
+- Same-IP contention never overdraws bucket; each independent IP has own quota
+- Invalid calls do not claim an IP slot; full table reports distinct status
+- All IPv4 keys, including 0 and UINT32_MAX, remain supported
+- No uninitialized bucket is published; destruction is quiescent-only
+- Previous phases build and tests pass under strict GCC and Clang
+- PDF guide and compiled outputs stay outside the repository
+
+### Next phase
+
+Introduce a cleaner higher-level rate-limiter API and controlled clock adapter,
+including clear error handling for resource exhaustion and testable per-IP
+request flows; retain the lifetime and no-allocation request-path constraints.

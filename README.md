@@ -292,3 +292,39 @@ unique keys and ensures exactly one successful insertion per IP. A concurrent
 full-table test admits exactly 16 unique keys to a 16-slot table and reports
 FULL for the other eight. This is a bounded concurrent key index, not yet a
 per-IP rate-limiter admission function.
+
+## Phase 11: concurrent per-IP admission
+
+The project now includes a complete **library-level per-IPv4 rate limiter**:
+`ip_rate_limiter_t` preallocates and initializes one `lf_bucket_t` per atomic
+hash-table slot, then lets concurrent workers claim stable IP-to-slot mappings.
+One IP cannot consume another IP's quota; new and existing IPs use the same
+atomic bucket CAS path.
+
+```sh
+make ip-rate-test
+make ip-rate-demo
+make test
+```
+
+Public API: `include/ip_rate_limiter.h`. Result categories are `IP_RATE_ALLOWED`,
+`IP_RATE_DENIED`, `IP_RATE_TABLE_FULL` and `IP_RATE_INVALID` - never conflate
+quota denial with table exhaustion. No request-path allocation occurs. All
+bucket payloads are ready before any IP slot becomes visible. An example:
+
+```c
+const bucket_policy_t policy = {2U, 100U};
+ip_rate_limiter_t limiter = {0};
+if (!ip_rate_limiter_init(&limiter, 128U, &policy, 1000U)) {
+    /* initialization failed: stop or fall back */
+}
+/* Only if init succeeded: run concurrent requests with monotonic ms. */
+/* ip_rate_limiter_check(&limiter, ip, 1U, now_ms); */
+/* After joining all threads: ip_rate_limiter_destroy(&limiter); */
+```
+
+This module is not yet an HTTP server, network filter, persistent store or
+production-hardened service. It supports fixed power-of-two table capacity,
+insert-only entries, global policy and a quiescent destruction contract. See
+`docs/per_ip_integration.md` for the publication, linearization and lifetime
+argument. Phase learning PDFs remain outside the repo.
