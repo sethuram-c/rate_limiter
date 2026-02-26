@@ -16,27 +16,27 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent IPv4 hashing (Phase 10)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 10
+## Current status - Phase 12
 
-Phase 10 implements a **concurrent, insertion-only IPv4 key index** using a
-fixed-capacity open-addressed hash table. Each slot stores a tagged IPv4 key
-in a C11 atomic 64-bit word; a successful CAS publishes one key exactly once.
-Concurrent lookups and same-key insertions are deduplicated. All IPv4 values
-remain valid, and a full table reports `IP_ATOMIC_FULL`.
+Phase 12 adds a **clock-aware in-process request API** (`rate_service_t`)
+above the Phase 11 fixed-capacity, per-IPv4 rate limiter. `rate_service_check()`
+samples a Linux monotonic clock and returns explicit `ALLOWED`, `DENIED`,
+`TABLE_FULL`, `INVALID` or `CLOCK_ERROR` results. A dependency-injected clock
+allows precise, deterministic tests without sleeps. Every IP key selects a
+preinitialized, independently CAS-updated token bucket.
 
-The index allocates its atomic slot array **before** worker threads start, so
-normal lookup/insertion paths do not allocate. It checks that 64-bit slot
-atomics are lock-free on the actual platform. `memory_order_seq_cst` keeps the
-cross-slot probe reasoning conservative and auditable.
+```bash
+make rate-service-test            # targeted clock-aware API tests
+make rate-service-demo            # deterministic trace + live-clock trace
+./build/rate_service_demo --live  # real CLOCK_MONOTONIC mode
+make test                         # full suite through Phase 12
+```
 
-**Not yet the finished per-IP rate limiter:** published entries contain only
-keys and indices, not token buckets. The existing Phase 7 lock-free token
-bucket is separate. Phase 11 will attach safely initialized buckets; bucket
-fields must never be initialized after publishing their key to other threads.
-No resizing, deletion or reclamation while worker threads are active.
-
-See `docs/atomic_ip_table_correctness.md` for invariants, memory-order
-reasoning, bounded progress, lifecycle constraints and known limitations.
+The public interface is currently an **in-process library**, not a network
+server. The underlying bucket/key atomics are checked for lock-free support;
+caller-provided clock callbacks can themselves block. See
+`docs/live_request_api.md` for initialization, lifetime, concurrency,
+clock-source assumptions and limitations.
 
 ## Requirements
 
@@ -70,6 +70,10 @@ make ip-plan-test     # Phase 9 sequential per-IP hash-table model
 make ip-plan-demo     # Phase 9 probe/collision demonstration
 make ip-atomic-test    # Phase 10 concurrent insertion/lookup tests
 make ip-atomic-demo    # Phase 10 tagged key/atomic publication demo
+make ip-rate-test       # Phase 11 per-IP bucket integration
+make ip-rate-demo       # Phase 11 per-IP demonstration
+make rate-service-test  # Phase 12 clock-aware API
+make rate-service-demo  # Phase 12 deterministic + live demos
 ```
 
 Expected test output includes:
@@ -328,3 +332,11 @@ production-hardened service. It supports fixed power-of-two table capacity,
 insert-only entries, global policy and a quiescent destruction contract. See
 `docs/per_ip_integration.md` for the publication, linearization and lifetime
 argument. Phase learning PDFs remain outside the repo.
+
+## Phase 12 learning objectives
+
+The new boundary is clock awareness without losing deterministic tests. Learn
+why checking clock failure before insertion preserves the request contract;
+why clocks are injected and callbacks need their own thread-safety guarantee;
+and why a lock-free atomic core does not automatically guarantee a lock-free
+entire request processing function. Store personal phase PDFs outside Git.

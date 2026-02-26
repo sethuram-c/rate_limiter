@@ -23,6 +23,8 @@ IP_ATOMIC_TEST := $(BUILD_DIR)/test_ip_atomic_table
 IP_ATOMIC_DEMO := $(BUILD_DIR)/ip_atomic_table_demo
 IP_RATE_TEST := $(BUILD_DIR)/test_ip_rate_limiter
 IP_RATE_DEMO := $(BUILD_DIR)/ip_rate_limiter_demo
+RATE_SERVICE_TEST := $(BUILD_DIR)/test_rate_service
+RATE_SERVICE_DEMO := $(BUILD_DIR)/rate_service_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -48,8 +50,11 @@ IP_ATOMIC_DEMO_SOURCES := examples/ip_atomic_table_demo.c $(IP_ATOMIC_SOURCES)
 IP_RATE_SOURCES := src/ip_rate_limiter.c $(IP_ATOMIC_SOURCES) $(LOCKFREE_SOURCES)
 IP_RATE_TEST_SOURCES := tests/test_ip_rate_limiter.c $(IP_RATE_SOURCES)
 IP_RATE_DEMO_SOURCES := examples/ip_rate_limiter_demo.c $(IP_RATE_SOURCES)
+RATE_SERVICE_SOURCES := src/rate_service.c src/monotonic_clock.c $(IP_RATE_SOURCES)
+RATE_SERVICE_TEST_SOURCES := tests/test_rate_service.c $(RATE_SERVICE_SOURCES)
+RATE_SERVICE_DEMO_SOURCES := examples/rate_service_demo.c $(RATE_SERVICE_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -111,6 +116,12 @@ $(IP_RATE_TEST): $(IP_RATE_TEST_SOURCES) include/ip_rate_limiter.h include/ip_at
 $(IP_RATE_DEMO): $(IP_RATE_DEMO_SOURCES) include/ip_rate_limiter.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_RATE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(RATE_SERVICE_TEST): $(RATE_SERVICE_TEST_SOURCES) include/rate_service.h include/ip_rate_limiter.h include/monotonic_clock.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(RATE_SERVICE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(RATE_SERVICE_DEMO): $(RATE_SERVICE_DEMO_SOURCES) include/rate_service.h include/ip_rate_limiter.h include/monotonic_clock.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(RATE_SERVICE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -166,10 +177,17 @@ ip-rate-test: $(IP_RATE_TEST)
 ip-rate-demo: $(IP_RATE_DEMO)
 	./$(IP_RATE_DEMO)
 
+rate-service-test: $(RATE_SERVICE_TEST)
+	./$(RATE_SERVICE_TEST)
+
+rate-service-demo: $(RATE_SERVICE_DEMO)
+	./$(RATE_SERVICE_DEMO)
+	./$(RATE_SERVICE_DEMO) --live
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -195,5 +213,7 @@ help:
 	  'make ip-atomic-demo Show atomic publication demo' \
 	  'make ip-rate-test Test per-IP bucket integration and contention' \
 	  'make ip-rate-demo Show per-IP independent admission decisions' \
-	  'make test        Run all Phase 11 tests' \
+	  'make rate-service-test  Test clock-aware request API' \
+	  'make rate-service-demo  Show injected and live monotonic clock processing' \
+	  'make test        Run all Phase 12 tests' \
 	  'make clean       Remove generated build artifacts'

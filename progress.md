@@ -338,3 +338,34 @@ Status: complete (library-level per-IP rate limiting; not a network service)
 Introduce a cleaner higher-level rate-limiter API and controlled clock adapter,
 including clear error handling for resource exhaustion and testable per-IP
 request flows; retain the lifetime and no-allocation request-path constraints.
+
+## Phase 12 - Clock-aware in-process request API
+
+Status: complete (real clock integration; **not** a network-facing server)
+
+### Added
+
+- `rate_service_t` with injectable thread-safe millisecond clock callback
+- `rate_service_monotonic_ms()` converting POSIX monotonic ns to integer ms
+- `rate_service_init_monotonic()` and explicit ALLOW/DENY/FULL/INVALID/CLOCK_ERROR
+- Validation before clock sampling and clock sampling before claiming IP keys
+- Failure-safe initialization and quiescent destruction/reinitialization
+- Deterministic and live-clock CLI demonstrations
+- 12-thread test with 60,000 requests and exactly 74 admissions across 2 IPs
+- Linux/API documentation, focused and full Makefile verification targets
+
+### Acceptance criteria
+
+- Exact refill and IP-isolation behavior with controlled injected time
+- Failed clock read or invalid amount never claims an index slot
+- Table exhaustion is distinct from insufficient tokens
+- Monotonic adapter returns integer milliseconds, bounded by before/after reads
+- Concurrent request decisions never exceed 37 admissions per IP in test
+- GCC/Clang strict builds and every prior test remain green
+- PDF learning guide and compiled artifacts stay outside source repository
+
+### Next phase
+
+Harden the public API and resource handling; consider policy validation,
+capacity planning, and robust service configuration. Do not add a network
+server prematurely or claim all callback implementations are lock-free.
