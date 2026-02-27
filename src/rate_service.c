@@ -1,5 +1,6 @@
 #include "rate_service.h"
 #include "monotonic_clock.h"
+#include "ip_table_plan.h"
 
 #include <stddef.h>
 
@@ -31,9 +32,11 @@ bool rate_service_init(rate_service_t *service, size_t slots,
                        rate_service_clock_fn clock, void *clock_context)
 {
     uint64_t now_ms;
+    uint64_t validated_initial_state;
 
-    if (!service_is_empty(service) || policy == NULL || clock == NULL ||
-        slots == 0U) {
+    if (!service_is_empty(service) || clock == NULL ||
+        !ip_table_plan_valid_capacity(slots) ||
+        !bucket_state_initial(policy, 0U, &validated_initial_state)) {
         return false;
     }
     /* Any failure precedes index allocation and key publication. */
@@ -47,6 +50,23 @@ bool rate_service_init(rate_service_t *service, size_t slots,
     service->clock_context = clock_context;
     service->clock = clock;
     return true;
+}
+
+bool rate_service_init_with_config(rate_service_t *service,
+                                   const rate_config_t *config,
+                                   rate_service_clock_fn clock,
+                                   void *clock_context)
+{
+    rate_config_plan_t plan;
+
+    if (!service_is_empty(service) || clock == NULL ||
+        rate_config_plan(config, &plan) != RATE_CONFIG_OK) {
+        return false;
+    }
+    /* Existing initializer samples the clock only after basic validation.
+     * The allocation budget is already checked in the local plan. */
+    return rate_service_init(service, plan.slots, &plan.policy,
+                             clock, clock_context);
 }
 
 bool rate_service_init_monotonic(rate_service_t *service, size_t slots,

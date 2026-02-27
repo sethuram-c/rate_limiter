@@ -16,27 +16,28 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent IPv4 hashing (Phase 10)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 12
+## Current status - Phase 13
 
-Phase 12 adds a **clock-aware in-process request API** (`rate_service_t`)
-above the Phase 11 fixed-capacity, per-IPv4 rate limiter. `rate_service_check()`
-samples a Linux monotonic clock and returns explicit `ALLOWED`, `DENIED`,
-`TABLE_FULL`, `INVALID` or `CLOCK_ERROR` results. A dependency-injected clock
-allows precise, deterministic tests without sleeps. Every IP key selects a
-preinitialized, independently CAS-updated token bucket.
+Phase 13 adds **explicit configuration planning, capacity bounds and a
+resource-budgeted initializer** on top of the Phase 12 clock-aware API.
+`rate_config_plan()` validates power-of-two table size, the 16-bit maximum
+token capacity, 48-bit clock limit, overflow-safe allocation arithmetic and a
+caller-specified **payload-array memory budget** before any side effects.
+`rate_service_init_with_config()` validates before sampling the clock.
+The original initialization APIs remain available for compatibility.
 
 ```bash
-make rate-service-test            # targeted clock-aware API tests
-make rate-service-demo            # deterministic trace + live-clock trace
-./build/rate_service_demo --live  # real CLOCK_MONOTONIC mode
-make test                         # full suite through Phase 12
+make rate-config-test             # invalid/boundary/overflow/memory tests
+make rate-config-demo             # actual byte estimate + rejection example
+make rate-service-test            # Phase 12 clock-aware API tests
+make test                         # full suite through Phase 13
 ```
 
-The public interface is currently an **in-process library**, not a network
-server. The underlying bucket/key atomics are checked for lock-free support;
-caller-provided clock callbacks can themselves block. See
-`docs/live_request_api.md` for initialization, lifetime, concurrency,
-clock-source assumptions and limitations.
+The rate limiter remains an **in-process library**, not a network server.
+Memory budgeting covers the two primary array payloads, **not** malloc
+metadata, stacks, or process RSS. The underlying atomic primitives check
+lock-free support, but user clocks may block. Read
+`docs/configuration_limits.md` for exact safety and lifetime contracts.
 
 ## Requirements
 
@@ -74,6 +75,8 @@ make ip-rate-test       # Phase 11 per-IP bucket integration
 make ip-rate-demo       # Phase 11 per-IP demonstration
 make rate-service-test  # Phase 12 clock-aware API
 make rate-service-demo  # Phase 12 deterministic + live demos
+make rate-config-test   # Phase 13 defensive configuration tests
+make rate-config-demo   # Phase 13 allocation planning walkthrough
 ```
 
 Expected test output includes:

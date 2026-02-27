@@ -369,3 +369,33 @@ Status: complete (real clock integration; **not** a network-facing server)
 Harden the public API and resource handling; consider policy validation,
 capacity planning, and robust service configuration. Do not add a network
 server prematurely or claim all callback implementations are lock-free.
+
+## Phase 13 - Configuration validation and resource budgets
+
+Status: complete (opt-in checked initializer; library remains in-process)
+
+### Added
+
+- `rate_config_t` and an allocation-free planner with typed status diagnostics
+- Exact target-ABI payload estimates for atomic key array and bucket array
+- Multiplication/addition overflow guards before checking memory budgets
+- Explicit power-of-two sizing, packed-field token and refill limits
+- `rate_service_init_with_config()` prevalidating BEFORE clock/alloc side effects
+- Improved validation order in the backwards-compatible base initializer
+- Deterministic targeted tests, demonstrator, Makefile targets and API docs
+- Tested 2,200 valid configuration plans, plus invalid and failure-path cases
+
+### Acceptance criteria
+
+- Bad policy/slots/budget leaves service empty; no clock callback is invoked
+- Exact budget accepted, one byte below budget rejected
+- Arithmetic never wraps during array size planning
+- No partial mutation of output plan on any failed validation
+- Existing rate-service and previous-phase regression tests remain green
+- GCC/Clang strict full suite, UBSan full suite and Phase 13 ASan tests pass
+- Personal PDF, binary artifacts and `.git` excluded from source ZIP
+
+### Next phase
+
+Improve the rate limiter's external diagnostics and request policy behavior
+without weakening the current concurrency and error-handling contracts.

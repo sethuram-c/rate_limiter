@@ -2,6 +2,7 @@
 #define RATE_SERVICE_H
 
 #include "ip_rate_limiter.h"
+#include "rate_config.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -50,6 +51,18 @@ bool rate_service_monotonic_ms(void *context, uint64_t *now_ms);
 bool rate_service_init(rate_service_t *service, size_t slots,
                        const bucket_policy_t *policy,
                        rate_service_clock_fn clock, void *clock_context);
+
+/* Phase 13: validate resource limits before sampling the clock or allocating.
+ * Calls rate_config_plan; use it directly for detailed validation diagnostics.
+ * The config is copied into immutable bucket policies during initialization;
+ * the caller may release or modify its input only AFTER init returns.
+ * On false, an initially empty service remains empty. Legacy init() remains
+ * available but does NOT enforce the new memory_budget_bytes constraint.
+ */
+bool rate_service_init_with_config(rate_service_t *service,
+                                   const rate_config_t *config,
+                                   rate_service_clock_fn clock,
+                                   void *clock_context);
 
 /* Convenience initialization using Linux CLOCK_MONOTONIC. */
 bool rate_service_init_monotonic(rate_service_t *service, size_t slots,
