@@ -20,7 +20,7 @@ bool lf_bucket_init(lf_bucket_t *bucket, const bucket_policy_t *policy,
 
 static bool try_consume_impl(lf_bucket_t *bucket, uint32_t amount,
                              uint64_t now_ms, bool *allowed,
-                             uint64_t *cas_attempts)
+                             uint64_t *cas_attempts, uint64_t *committed_state)
 {
     uint64_t observed;
     uint64_t attempts = 0U;
@@ -45,6 +45,9 @@ static bool try_consume_impl(lf_bucket_t *bucket, uint32_t amount,
                 &bucket->state, &observed, candidate.next_state,
                 memory_order_relaxed, memory_order_relaxed)) {
             *allowed = candidate.allowed;
+            if (committed_state != NULL) {
+                *committed_state = candidate.next_state;
+            }
             if (cas_attempts != NULL) {
                 *cas_attempts = attempts;
             }
@@ -56,7 +59,7 @@ static bool try_consume_impl(lf_bucket_t *bucket, uint32_t amount,
 bool lf_bucket_try_consume(lf_bucket_t *bucket, uint32_t amount,
                            uint64_t now_ms, bool *allowed)
 {
-    return try_consume_impl(bucket, amount, now_ms, allowed, NULL);
+    return try_consume_impl(bucket, amount, now_ms, allowed, NULL, NULL);
 }
 
 bool lf_bucket_try_consume_profiled(lf_bucket_t *bucket, uint32_t amount,
@@ -66,7 +69,18 @@ bool lf_bucket_try_consume_profiled(lf_bucket_t *bucket, uint32_t amount,
     if (cas_attempts == NULL) {
         return false;
     }
-    return try_consume_impl(bucket, amount, now_ms, allowed, cas_attempts);
+    return try_consume_impl(bucket, amount, now_ms, allowed, cas_attempts, NULL);
+}
+
+bool lf_bucket_try_consume_observed(lf_bucket_t *bucket, uint32_t amount,
+                                    uint64_t now_ms, bool *allowed,
+                                    uint64_t *committed_state)
+{
+    if (committed_state == NULL) {
+        return false;
+    }
+    return try_consume_impl(bucket, amount, now_ms, allowed, NULL,
+                            committed_state);
 }
 
 bool lf_bucket_snapshot(const lf_bucket_t *bucket, uint64_t *anchor_ms,

@@ -399,3 +399,33 @@ Status: complete (opt-in checked initializer; library remains in-process)
 
 Improve the rate limiter's external diagnostics and request policy behavior
 without weakening the current concurrency and error-handling contracts.
+
+
+## Phase 14 - Request diagnostics and policy response metadata
+
+Status: complete
+
+### Added
+
+- same-CAS committed-state reporting without a second atomic read
+- optional per-IP and service request diagnostic APIs
+- token balance, refill anchor, and policy fields tied to the decision
+- overflow-checked earliest retry estimate for satisfiable denied batches
+- explicit handling for impossible requests, clock failures and table full
+- deterministic boundary tests plus 32,000 threaded requests
+- independent demo, docs and Makefile targets
+
+### Acceptance criteria
+
+- decision and reported remaining balance originate from the same CAS
+- existing public request APIs and earlier tests remain compatible
+- no extra allocation or locking is required for request diagnostics
+- errors and table-full returns never pretend to have bucket state
+- retry time is only a hint and respects 48-bit timestamp bounds
+- GCC/Clang strict builds and test suite succeed
+- learning PDF stays outside the Git repository
+
+### Next phase
+
+Introduce policy-level testing and practical caller integration examples,
+including operational error classification and status reporting.

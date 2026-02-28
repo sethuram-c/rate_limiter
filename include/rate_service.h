@@ -71,6 +71,33 @@ bool rate_service_init_monotonic(rate_service_t *service, size_t slots,
 /* Stop/join all worker threads first. Safe for an empty/failed object. */
 void rate_service_destroy(rate_service_t *service);
 
+/* Phase 14 diagnostic: captured from the SAME successful CAS that made the
+ * admission decision. Not a live, stable snapshot: other workers can update
+ * the bucket by the time this function returns. The sample is truncated ms.
+ * On every valid call, result is populated; has_bucket_state is true only
+ * for decisions ALLOWED/DENIED. Other fields are zeroed on failures.
+ * retry_possible is meaningful only for DENIED; request > capacity or a
+ * required refill beyond the timestamp limit cannot have a retry hint.
+ * retry_after_ms is a lower bound based on the sampled monotonic clock. */
+typedef struct {
+    rate_service_result_t result;
+    bool has_bucket_state;
+    uint64_t sampled_now_ms;
+    uint64_t refill_anchor_ms;
+    uint16_t remaining_tokens;
+    uint16_t capacity;
+    uint64_t refill_interval_ms;
+    bool retry_possible;
+    uint64_t retry_after_ms;
+} rate_service_diagnostic_t;
+
+/* Returns false only if out is NULL; in this case NO request is attempted.
+ * Otherwise returns true and writes out->result for every outcome.
+ * Safe for concurrent requests when normal service lifetime rules hold. */
+bool rate_service_check_detailed(rate_service_t *service, uint32_t ipv4,
+                                 uint32_t tokens,
+                                 rate_service_diagnostic_t *out);
+
 /* Invalid argument or clock failure MUST NOT claim a new IP slot.
  * RATE_SERVICE_DENIED means a valid request with insufficient tokens.
  * RATE_SERVICE_TABLE_FULL means a new key cannot fit; existing keys still work.

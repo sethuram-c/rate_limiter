@@ -48,6 +48,23 @@ ip_rate_decision_t ip_rate_limiter_check(ip_rate_limiter_t *limiter,
                                          uint32_t ip, uint32_t amount,
                                          uint64_t now_ms);
 
+/* Phase 14: observation captured by the request's own CAS.
+ * valid_state is true ONLY for ALLOWED/DENIED, never for FULL/INVALID.
+ * Fields are copied before returning; they describe the successful CAS
+ * and can immediately be superseded by other concurrent operations. */
+typedef struct {
+    ip_rate_decision_t decision;
+    bool valid_state;
+    uint64_t committed_state;
+    bucket_policy_t policy;
+} ip_rate_report_t;
+
+/* On non-NULL out, reports any decision, including INVALID/FULL.
+ * Returns false only if out is NULL; then no request is attempted. */
+bool ip_rate_limiter_check_report(ip_rate_limiter_t *limiter,
+                                  uint32_t ip, uint32_t amount,
+                                  uint64_t now_ms, ip_rate_report_t *out);
+
 /* For observation only: NOT a transactional snapshot across different IPs.
  * On success, *found says if ip is visible; if !found, other outputs unchanged.
  * The key can be inserted immediately after a NOT FOUND response.

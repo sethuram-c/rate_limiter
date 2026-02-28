@@ -50,29 +50,52 @@ void ip_rate_limiter_destroy(ip_rate_limiter_t *limiter)
     }
 }
 
+bool ip_rate_limiter_check_report(ip_rate_limiter_t *limiter,
+                                  uint32_t ip, uint32_t amount,
+                                  uint64_t now_ms, ip_rate_report_t *out)
+{
+    ip_atomic_insert_result_t slot;
+    ip_rate_report_t report = {0};
+    bool allowed;
+    uint64_t committed;
+
+    if (out == NULL) {
+        return false;
+    }
+    report.decision = IP_RATE_INVALID;
+    /* Validate BEFORE claiming an IP slot (a failed request has no effect). */
+    if (!ready(limiter) || amount == 0U ||
+        now_ms > BUCKET_STATE_MAX_TIME_MS ||
+        !ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
+        *out = report;
+        return true;
+    }
+    if (slot.kind == IP_ATOMIC_FULL) {
+        report.decision = IP_RATE_TABLE_FULL;
+        *out = report;
+        return true;
+    }
+    if (!lf_bucket_try_consume_observed(&limiter->buckets[slot.index],
+                                        amount, now_ms, &allowed,
+                                        &committed)) {
+        *out = report;
+        return true;
+    }
+    report.decision = allowed ? IP_RATE_ALLOWED : IP_RATE_DENIED;
+    report.valid_state = true;
+    report.committed_state = committed;
+    report.policy = limiter->buckets[slot.index].policy;
+    *out = report;
+    return true;
+}
+
 ip_rate_decision_t ip_rate_limiter_check(ip_rate_limiter_t *limiter,
                                          uint32_t ip, uint32_t amount,
                                          uint64_t now_ms)
 {
-    ip_atomic_insert_result_t slot;
-    bool allowed;
-
-    /* Validate BEFORE claiming an IP slot (a failed request has no effect). */
-    if (!ready(limiter) || amount == 0U ||
-        now_ms > BUCKET_STATE_MAX_TIME_MS) {
-        return IP_RATE_INVALID;
-    }
-    if (!ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
-        return IP_RATE_INVALID;
-    }
-    if (slot.kind == IP_ATOMIC_FULL) {
-        return IP_RATE_TABLE_FULL;
-    }
-    if (!lf_bucket_try_consume(&limiter->buckets[slot.index], amount,
-                               now_ms, &allowed)) {
-        return IP_RATE_INVALID;
-    }
-    return allowed ? IP_RATE_ALLOWED : IP_RATE_DENIED;
+    ip_rate_report_t report;
+    (void)ip_rate_limiter_check_report(limiter, ip, amount, now_ms, &report);
+    return report.decision;
 }
 
 bool ip_rate_limiter_snapshot(const ip_rate_limiter_t *limiter,

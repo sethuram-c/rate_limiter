@@ -110,3 +110,74 @@ rate_service_result_t rate_service_check(rate_service_t *service,
     }
     return RATE_SERVICE_INVALID;
 }
+
+/* Map lower-layer results without adding a second state read. */
+static rate_service_result_t map_decision(ip_rate_decision_t decision)
+{
+    switch (decision) {
+    case IP_RATE_ALLOWED: return RATE_SERVICE_ALLOWED;
+    case IP_RATE_DENIED: return RATE_SERVICE_DENIED;
+    case IP_RATE_TABLE_FULL: return RATE_SERVICE_TABLE_FULL;
+    case IP_RATE_INVALID: return RATE_SERVICE_INVALID;
+    }
+    return RATE_SERVICE_INVALID;
+}
+
+bool rate_service_check_detailed(rate_service_t *service, uint32_t ipv4,
+                                 uint32_t tokens,
+                                 rate_service_diagnostic_t *out)
+{
+    rate_service_diagnostic_t report = {0};
+    ip_rate_report_t lower;
+    uint64_t sample;
+
+    if (out == NULL) {
+        return false;
+    }
+    report.result = RATE_SERVICE_INVALID;
+    if (service == NULL || service->clock == NULL ||
+        service->limiter.buckets == NULL ||
+        service->limiter.index.slots == NULL || tokens == 0U) {
+        *out = report;
+        return true;
+    }
+    if (!service->clock(service->clock_context, &sample) ||
+        sample > BUCKET_STATE_MAX_TIME_MS) {
+        report.result = RATE_SERVICE_CLOCK_ERROR;
+        *out = report;
+        return true;
+    }
+    (void)ip_rate_limiter_check_report(&service->limiter, ipv4, tokens,
+                                      sample, &lower);
+    report.result = map_decision(lower.decision);
+    if (lower.valid_state) {
+        uint64_t anchor;
+        uint16_t remaining;
+        uint64_t deficit;
+        bucket_state_unpack(lower.committed_state, &anchor, &remaining);
+        report.has_bucket_state = true;
+        report.sampled_now_ms = sample;
+        report.refill_anchor_ms = anchor;
+        report.remaining_tokens = remaining;
+        report.capacity = lower.policy.capacity;
+        report.refill_interval_ms = lower.policy.refill_interval_ms;
+
+        if (report.result == RATE_SERVICE_DENIED &&
+            tokens <= (uint32_t)lower.policy.capacity) {
+            uint64_t wait_until;
+            deficit = (uint64_t)tokens - (uint64_t)remaining;
+            /* Prevent producing a retry time outside the 48-bit clock range.
+             * deficit >= 1, interval >= 1 for initialized policies. */
+            if (deficit <= (BUCKET_STATE_MAX_TIME_MS - anchor) /
+                           lower.policy.refill_interval_ms) {
+                wait_until = anchor + deficit * lower.policy.refill_interval_ms;
+                if (wait_until > sample) {
+                    report.retry_possible = true;
+                    report.retry_after_ms = wait_until - sample;
+                }
+            }
+        }
+    }
+    *out = report;
+    return true;
+}

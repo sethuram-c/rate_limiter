@@ -27,6 +27,8 @@ RATE_SERVICE_TEST := $(BUILD_DIR)/test_rate_service
 RATE_SERVICE_DEMO := $(BUILD_DIR)/rate_service_demo
 RATE_CONFIG_TEST := $(BUILD_DIR)/test_rate_config
 RATE_CONFIG_DEMO := $(BUILD_DIR)/rate_config_demo
+RATE_DIAGNOSTICS_TEST := $(BUILD_DIR)/test_rate_diagnostics
+RATE_DIAGNOSTICS_DEMO := $(BUILD_DIR)/rate_diagnostics_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -58,8 +60,10 @@ RATE_SERVICE_DEMO_SOURCES := examples/rate_service_demo.c $(RATE_SERVICE_SOURCES
 RATE_CONFIG_SOURCES := $(RATE_SERVICE_SOURCES)
 RATE_CONFIG_TEST_SOURCES := tests/test_rate_config.c $(RATE_CONFIG_SOURCES)
 RATE_CONFIG_DEMO_SOURCES := examples/rate_config_demo.c $(RATE_CONFIG_SOURCES)
+RATE_DIAGNOSTICS_TEST_SOURCES := tests/test_rate_diagnostics.c $(RATE_SERVICE_SOURCES)
+RATE_DIAGNOSTICS_DEMO_SOURCES := examples/rate_diagnostics_demo.c $(RATE_SERVICE_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -133,6 +137,12 @@ $(RATE_CONFIG_TEST): $(RATE_CONFIG_TEST_SOURCES) include/rate_config.h include/r
 $(RATE_CONFIG_DEMO): $(RATE_CONFIG_DEMO_SOURCES) include/rate_config.h include/rate_service.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(RATE_CONFIG_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(RATE_DIAGNOSTICS_TEST): $(RATE_DIAGNOSTICS_TEST_SOURCES) include/rate_service.h include/ip_rate_limiter.h include/lockfree_bucket.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(RATE_DIAGNOSTICS_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(RATE_DIAGNOSTICS_DEMO): $(RATE_DIAGNOSTICS_DEMO_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(RATE_DIAGNOSTICS_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -201,10 +211,16 @@ rate-config-test: $(RATE_CONFIG_TEST)
 rate-config-demo: $(RATE_CONFIG_DEMO)
 	./$(RATE_CONFIG_DEMO)
 
+rate-diagnostics-test: $(RATE_DIAGNOSTICS_TEST)
+	./$(RATE_DIAGNOSTICS_TEST)
+
+rate-diagnostics-demo: $(RATE_DIAGNOSTICS_DEMO)
+	./$(RATE_DIAGNOSTICS_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -234,5 +250,7 @@ help:
 	  'make rate-service-demo  Show injected and live monotonic clock processing' \
 	  'make rate-config-test  Test resource planning and defensive configuration' \
 	  'make rate-config-demo  Show exact memory planning and rejection' \
-	  'make test        Run all Phase 13 tests' \
+	  'make rate-diagnostics-test  Test decision-aligned CAS diagnostics' \
+	  'make rate-diagnostics-demo  Show retry-hint policy behavior' \
+	  'make test        Run all Phase 14 tests' \
 	  'make clean       Remove generated build artifacts'

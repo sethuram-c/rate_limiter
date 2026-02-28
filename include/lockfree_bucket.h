@@ -50,6 +50,14 @@ bool lf_bucket_try_consume_profiled(lf_bucket_t *bucket, uint32_t amount,
                                     uint64_t now_ms, bool *allowed,
                                     uint64_t *cas_attempts);
 
+/* Phase 14: return the EXACT state committed by this operation's successful CAS.
+ * The caller receives the resulting packed state, not a later snapshot. Other
+ * workers may change it immediately afterward; keep the lifetime contract.
+ * On false, outputs are unchanged. */
+bool lf_bucket_try_consume_observed(lf_bucket_t *bucket, uint32_t amount,
+                                    uint64_t now_ms, bool *allowed,
+                                    uint64_t *committed_state);
+
 /* A coherent observation of both fields; no synchronization of other data. */
 bool lf_bucket_snapshot(const lf_bucket_t *bucket, uint64_t *anchor_ms,
                         uint16_t *tokens);

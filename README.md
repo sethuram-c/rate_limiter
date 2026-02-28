@@ -343,3 +343,19 @@ why checking clock failure before insertion preserves the request contract;
 why clocks are injected and callbacks need their own thread-safety guarantee;
 and why a lock-free atomic core does not automatically guarantee a lock-free
 entire request processing function. Store personal phase PDFs outside Git.
+
+
+## Phase 14 - Decision-aligned request diagnostics
+
+`rate_service_check_detailed()` returns a result plus a token balance captured
+from the very same successful bucket CAS. The report is **not** a live snapshot;
+other workers can change the bucket afterward. Denied requests with achievable
+refill deadlines receive a monotonic-millisecond `retry_after_ms` hint.
+Requests exceeding capacity, clock errors, and table-full decisions do not.
+See [`docs/request_diagnostics.md`](docs/request_diagnostics.md).
+
+```sh
+make rate-diagnostics-test
+make rate-diagnostics-demo
+make test
+```
