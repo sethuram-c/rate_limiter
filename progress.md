@@ -458,3 +458,34 @@ Status: complete
 
 Add caller-side adapters or richer end-to-end simulations and evaluate
 operational tradeoffs without confusing counters with instantaneous snapshots.
+
+## Phase 16 - In-process request gateway and reproducible traffic scenarios
+
+Status: complete (application adapter and deterministic simulation, **not** a web server)
+
+### Added
+
+- Strict IPv4 dotted-decimal ingress parsing with `inet_pton` and `ntohl`
+- HTTP-style response classification with 200 / 400 / 429 / 503 codes
+- Decision-aligned remaining balance and optional millisecond retry hint
+- Explicit `forwarded` flag differentiating local rejection from service calls
+- Eleven-event deterministic timeline covering refill, independent IPs,
+  malformed text, clock failure, table exhaustion, and invalid token amounts
+- Concurrent 40,000-request adapter test across 4 IPs, exactly 148 admissions
+- Documentation, demo and dedicated Makefile targets
+
+### Acceptance criteria
+
+- Malformed IPv4 text does not access the service, clock, tokens or counters
+- Valid zero-cost requests remain visible in service invalid counters
+- Retry is an earliest-eligibility hint, not guaranteed acceptance
+- Final service counts match 10 forwarded requests out of 11 events
+- Concurrent adapter calls never overspend four independent 37-token buckets
+- Full previous tests remain green under GCC/Clang and targeted sanitizers
+- Learning PDF, Git history and build artifacts stay out of source ZIP
+
+### Next phase
+
+Explore configuration/policy integration at application boundaries, additional
+structured scenarios, or profiling. Keep the distinction between a library
+adapter and a deployed network server explicit.

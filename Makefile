@@ -31,6 +31,8 @@ RATE_DIAGNOSTICS_TEST := $(BUILD_DIR)/test_rate_diagnostics
 RATE_DIAGNOSTICS_DEMO := $(BUILD_DIR)/rate_diagnostics_demo
 RATE_STATUS_TEST := $(BUILD_DIR)/test_rate_status
 RATE_STATUS_DEMO := $(BUILD_DIR)/rate_status_demo
+REQUEST_GATEWAY_TEST := $(BUILD_DIR)/test_request_gateway
+REQUEST_GATEWAY_DEMO := $(BUILD_DIR)/request_gateway_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -66,8 +68,11 @@ RATE_DIAGNOSTICS_TEST_SOURCES := tests/test_rate_diagnostics.c $(RATE_SERVICE_SO
 RATE_DIAGNOSTICS_DEMO_SOURCES := examples/rate_diagnostics_demo.c $(RATE_SERVICE_SOURCES)
 RATE_STATUS_TEST_SOURCES := tests/test_rate_status.c $(RATE_SERVICE_SOURCES)
 RATE_STATUS_DEMO_SOURCES := examples/rate_status_demo.c $(RATE_SERVICE_SOURCES)
+REQUEST_GATEWAY_SOURCES := src/request_gateway.c $(RATE_SERVICE_SOURCES)
+REQUEST_GATEWAY_TEST_SOURCES := tests/test_request_gateway.c $(REQUEST_GATEWAY_SOURCES)
+REQUEST_GATEWAY_DEMO_SOURCES := examples/request_gateway_demo.c $(REQUEST_GATEWAY_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -153,6 +158,12 @@ $(RATE_STATUS_TEST): $(RATE_STATUS_TEST_SOURCES) include/rate_service.h | $(BUIL
 $(RATE_STATUS_DEMO): $(RATE_STATUS_DEMO_SOURCES) include/rate_service.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(RATE_STATUS_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(REQUEST_GATEWAY_TEST): $(REQUEST_GATEWAY_TEST_SOURCES) include/request_gateway.h include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(REQUEST_GATEWAY_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(REQUEST_GATEWAY_DEMO): $(REQUEST_GATEWAY_DEMO_SOURCES) include/request_gateway.h include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(REQUEST_GATEWAY_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -233,10 +244,16 @@ rate-status-test: $(RATE_STATUS_TEST)
 rate-status-demo: $(RATE_STATUS_DEMO)
 	./$(RATE_STATUS_DEMO)
 
+request-gateway-test: $(REQUEST_GATEWAY_TEST)
+	./$(REQUEST_GATEWAY_TEST)
+
+request-gateway-demo: $(REQUEST_GATEWAY_DEMO)
+	./$(REQUEST_GATEWAY_DEMO)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -269,6 +286,8 @@ help:
 	  'make rate-diagnostics-test  Test decision-aligned CAS diagnostics' \
 	  'make rate-diagnostics-demo  Show retry-hint policy behavior' \
 	  'make rate-status-test Test operational status and atomic counters' \
+	  'make request-gateway-test  Run HTTP-style adapter tests' \
+	  'make request-gateway-demo  Run a deterministic 11-request trace' \
 	  'make rate-status-demo Show policy classification and counter snapshot' \
-	  'make test        Run all Phase 15 tests' \
+	  'make test        Run all tests through Phase 16' \
 	  'make clean       Remove generated build artifacts'

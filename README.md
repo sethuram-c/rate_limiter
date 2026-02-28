@@ -16,7 +16,7 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent IPv4 hashing (Phase 10)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 15
+## Current status - Phase 16
 
 Earlier Phase 13 added **explicit configuration planning, capacity bounds and a
 resource-budgeted initializer** on top of the Phase 12 clock-aware API.
@@ -60,6 +60,29 @@ join to assert totals. Counters accumulate until quiescent destruction and
 reinitialization, and wrap modulo 2^64 if exhausted. An invalid request with
 no initialized service cannot be counted, nor can a detailed call with a
 NULL output pointer (no attempt is made). Read `docs/operational_status.md`.
+
+## Phase 16 - In-process HTTP-style gateway and request simulation
+
+A tiny application adapter accepts validated dotted-decimal IPv4 client text,
+converts it to a numeric key, invokes the existing detailed rate-service API,
+and maps outcomes to illustrative HTTP-style statuses (200, 429, 400, 503).
+It includes decision-aligned remaining tokens, optional earliest-retry hints,
+and an explicit flag for requests rejected **before** reaching the service.
+
+```bash
+make request-gateway-test  # strict IPv4 input, timeline and concurrency
+make request-gateway-demo  # 11-event deterministic multi-IP trace
+make test                  # all prior phases + Phase 16
+```
+
+The trace has 11 ingress events but only 10 service calls because one malformed
+IP is rejected locally. Final service counts: 5 allowed, 2 denied, 1 full,
+1 invalid, 1 clock error. The concurrent test makes 40,000 calls to four IPs
+with 37 tokens each and checks exactly 148 admissions.
+
+**Not an HTTP server:** the adapter does not bind sockets, trust forwarding
+headers or serialize HTTP responses. Real deployments need authenticated
+client identity at the networking boundary. See `docs/request_gateway_integration.md`.
 
 ## Requirements
 
