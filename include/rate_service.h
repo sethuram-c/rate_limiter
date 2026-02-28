@@ -4,6 +4,7 @@
 #include "ip_rate_limiter.h"
 #include "rate_config.h"
 
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,10 +25,22 @@
  */
 typedef bool (*rate_service_clock_fn)(void *context, uint64_t *now_ms);
 
+/* Phase 15: cumulative outcomes from completed initialized-service requests.
+ * Each relaxed atomic increment is independent; snapshots taken during
+ * concurrent requests are NOT one atomic cross-counter transaction. */
+typedef struct {
+    _Atomic uint64_t allowed;
+    _Atomic uint64_t denied;
+    _Atomic uint64_t table_full;
+    _Atomic uint64_t invalid;
+    _Atomic uint64_t clock_error;
+} rate_service_counters_t;
+
 typedef struct {
     ip_rate_limiter_t limiter;
     rate_service_clock_fn clock;
     void *clock_context;
+    rate_service_counters_t counters;
 } rate_service_t;
 
 typedef enum {
@@ -37,6 +50,37 @@ typedef enum {
     RATE_SERVICE_INVALID,
     RATE_SERVICE_CLOCK_ERROR
 } rate_service_result_t;
+
+/* Phase 15: values for snapshots (without atomic members).
+ * After ALL request threads join, each outcome is counted exactly once.
+ * While requests are running, independent loads do not form a coherent
+ * transactional snapshot. Counters wrap modulo 2^64 if exhausted. */
+typedef struct {
+    uint64_t allowed;
+    uint64_t denied;
+    uint64_t table_full;
+    uint64_t invalid;
+    uint64_t clock_error;
+} rate_service_stats_t;
+
+typedef enum {
+    RATE_STATUS_ADMIT,
+    RATE_STATUS_THROTTLED,
+    RATE_STATUS_CAPACITY_EXHAUSTED,
+    RATE_STATUS_BAD_REQUEST,
+    RATE_STATUS_CLOCK_UNAVAILABLE,
+    RATE_STATUS_UNKNOWN
+} rate_service_status_t;
+
+/* Deterministic classification; pure, allocation-free helpers. */
+rate_service_status_t rate_service_classify(rate_service_result_t result);
+const char *rate_service_result_name(rate_service_result_t result);
+
+/* Available only for an initialized service. Does not reset counters.
+ * On false, out remains unmodified. Initialization/destroy are quiescent-only.
+ * An invalid call on a nonexistent/uninitialized service cannot be counted. */
+bool rate_service_get_stats(const rate_service_t *service,
+                            rate_service_stats_t *out);
 
 /* Adapter for Linux/POSIX CLOCK_MONOTONIC; context is ignored.
  * Returns milliseconds, truncated from nanoseconds (never rounded up).

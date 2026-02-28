@@ -16,9 +16,9 @@ The finished project is intended to demonstrate:
 - fixed-capacity concurrent IPv4 hashing (Phase 10)
 - correctness testing and performance analysis (future phases)
 
-## Current status - Phase 13
+## Current status - Phase 15
 
-Phase 13 adds **explicit configuration planning, capacity bounds and a
+Earlier Phase 13 added **explicit configuration planning, capacity bounds and a
 resource-budgeted initializer** on top of the Phase 12 clock-aware API.
 `rate_config_plan()` validates power-of-two table size, the 16-bit maximum
 token capacity, 48-bit clock limit, overflow-safe allocation arithmetic and a
@@ -38,6 +38,28 @@ Memory budgeting covers the two primary array payloads, **not** malloc
 metadata, stacks, or process RSS. The underlying atomic primitives check
 lock-free support, but user clocks may block. Read
 `docs/configuration_limits.md` for exact safety and lifetime contracts.
+
+## Phase 15 - Operational status and request outcome counters
+
+The Phase 15 service adds five independent C11 relaxed-atomic outcome
+counters, covering ALLOWED, DENIED, TABLE_FULL, INVALID, CLOCK_ERROR. Both
+legacy and detailed request APIs count each completed initialized-service
+request exactly once. `rate_service_get_stats()` reads the counters without
+mutating them. `rate_service_classify()` and `rate_service_result_name()`
+map raw results to stable categories and labels.
+
+```bash
+make rate-status-test
+make rate-status-demo
+make test
+```
+
+**Concurrency caveat:** During worker activity, the five counter loads do not
+represent a consistent global instant. Take a final snapshot after workers
+join to assert totals. Counters accumulate until quiescent destruction and
+reinitialization, and wrap modulo 2^64 if exhausted. An invalid request with
+no initialized service cannot be counted, nor can a detailed call with a
+NULL output pointer (no attempt is made). Read `docs/operational_status.md`.
 
 ## Requirements
 

@@ -429,3 +429,32 @@ Status: complete
 
 Introduce policy-level testing and practical caller integration examples,
 including operational error classification and status reporting.
+
+
+## Phase 15 - Operational status and policy classification
+
+Status: complete
+
+### Added
+
+- C11 lock-free-checked relaxed-atomic counters for all five service outcomes
+- one increment for every completed request on a valid initialized service
+- coverage of both legacy and diagnostic request APIs with no double counting
+- non-transactional snapshot API and pure outcome classification helpers
+- deterministic error/limit tests and mixed-API concurrent workload
+- operational documentation, CLI demo and independent `make rate-status-test`
+
+### Acceptance criteria
+
+- policy classifications preserve all five distinct service outcomes
+- invalid, denied, clock error, table full, and allowed outcomes counted once
+- detailed NULL-output call makes no request and does not change stats
+- counters are only read on initialized service; malformed calls remain safe
+- exactly 148 allowed in 160,000 requests over 4 IPs at fixed time
+- GCC/Clang strict suites and sanitizer targeted tests pass
+- source ZIP contains no Git database, PDFs, or compiled binaries
+
+### Next phase
+
+Add caller-side adapters or richer end-to-end simulations and evaluate
+operational tradeoffs without confusing counters with instantaneous snapshots.
