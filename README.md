@@ -404,3 +404,22 @@ make rate-diagnostics-test
 make rate-diagnostics-demo
 make test
 ```
+
+## Phase 17: static application policy (IPv4 CIDR)
+
+`request_policy_t` adds up to 32 rules over the existing gateway, with strict
+CIDR parsing, longest-prefix matching, and BLOCK winning same-prefix ties.
+BYPASS returns HTTP-style 200 without token/counter changes, BLOCK returns 403
+without token/counter changes, and unmatched traffic takes the Phase 16 path.
+A zero-cost request cannot be exempted from validation. Configure the rules
+**before** starting worker threads and never mutate them while requests run.
+
+```sh
+make request-policy-test
+make request-policy-demo
+make test
+```
+
+See [`docs/request_policy_configuration.md`](docs/request_policy_configuration.md)
+for precedence, security assumptions, accounting, and concurrency contracts.
+This is still an **in-process** application adapter, not a deployed HTTP server.

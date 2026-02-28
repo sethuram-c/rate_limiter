@@ -489,3 +489,33 @@ Status: complete (application adapter and deterministic simulation, **not** a we
 Explore configuration/policy integration at application boundaries, additional
 structured scenarios, or profiling. Keep the distinction between a library
 adapter and a deployed network server explicit.
+
+## Phase 17 - Immutable CIDR policy configuration and advanced ingress scenarios
+
+Status: complete (static, in-process application policy; NOT a deployed HTTP server)
+
+### Added
+
+- Strict IPv4 CIDR parsing, network normalization and fixed 32-rule capacity
+- Longest-prefix precedence with BLOCK winning equal-prefix ties
+- Static BYPASS (HTTP-style 200) and BLOCK (403), both without service calls
+- Delegation to the original gateway for unmatched, malformed or zero-cost inputs
+- Explicit route metadata that distinguishes policy outcomes from quota denials
+- Deterministic multi-route tests, full-capacity tests and 40,000 pthread requests
+- Demo, docs and Makefile targets without modifying the lock-free bucket core
+
+### Acceptance criteria
+
+- Rule additions never partially mutate the table on invalid/full input
+- Empty policy behaves like Phase 16 request gateway
+- Exemptions and blocks never claim IP slots or increment service counters
+- Malformed IPs remain ingress errors; valid zero-token calls are service invalids
+- Concurrent test: 10,000 bypass + 10,000 block + 10,000 malformed,
+  plus 41 admits and 9,959 throttles among 10,000 forwarded requests
+- Compiler and sanitizer verification, full previous regression suite
+- Phase 17 learning PDF stored outside the Git repository
+
+### Next phase
+
+Improve distribution-level integration and reproducible workload measurement;
+keep the in-process library scope explicit.
