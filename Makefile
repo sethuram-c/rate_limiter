@@ -34,6 +34,8 @@ RATE_STATUS_DEMO := $(BUILD_DIR)/rate_status_demo
 REQUEST_GATEWAY_TEST := $(BUILD_DIR)/test_request_gateway
 REQUEST_GATEWAY_DEMO := $(BUILD_DIR)/request_gateway_demo
 REQUEST_POLICY_TEST := $(BUILD_DIR)/test_request_policy
+WORKLOAD_BENCH := $(BUILD_DIR)/workload_bench
+WORKLOAD_BENCH_SOURCES = bench/workload_bench.c $(RATE_SERVICE_SOURCES)
 REQUEST_POLICY_DEMO := $(BUILD_DIR)/request_policy_demo
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
@@ -77,7 +79,7 @@ REQUEST_POLICY_SOURCES := src/request_policy.c $(REQUEST_GATEWAY_SOURCES)
 REQUEST_POLICY_TEST_SOURCES := tests/test_request_policy.c $(REQUEST_POLICY_SOURCES)
 REQUEST_POLICY_DEMO_SOURCES := examples/request_policy_demo.c $(REQUEST_POLICY_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -175,6 +177,9 @@ $(REQUEST_POLICY_TEST): $(REQUEST_POLICY_TEST_SOURCES) include/request_policy.h 
 $(REQUEST_POLICY_DEMO): $(REQUEST_POLICY_DEMO_SOURCES) include/request_policy.h include/request_gateway.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(REQUEST_POLICY_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
+$(WORKLOAD_BENCH): $(WORKLOAD_BENCH_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(WORKLOAD_BENCH_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -267,10 +272,18 @@ request-policy-test: $(REQUEST_POLICY_TEST)
 request-policy-demo: $(REQUEST_POLICY_DEMO)
 	./$(REQUEST_POLICY_DEMO)
 
+workload-bench: $(WORKLOAD_BENCH)
+	./$(WORKLOAD_BENCH) 1 100000 shared
+	./$(WORKLOAD_BENCH) 4 100000 shared
+	./$(WORKLOAD_BENCH) 4 100000 sharded
+
+benchmark-smoke: $(WORKLOAD_BENCH)
+	./tests/benchmark_smoke.sh ./$(WORKLOAD_BENCH)
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -308,5 +321,7 @@ help:
 	  'make rate-status-demo Show policy classification and counter snapshot' \
 	  'make request-policy-test   Test CIDR priority, bypass/block and concurrency' \
 	  'make request-policy-demo   Show advanced policy routes' \
-	  'make test        Run all tests through Phase 17' \
+	  'make workload-bench  Run 1/4-thread sample throughput workloads' \
+	  'make benchmark-smoke Validate benchmark scenario accounting' \
+	  'make test        Run all tests through Phase 18' \
 	  'make clean       Remove generated build artifacts'

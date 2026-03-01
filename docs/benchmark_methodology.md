@@ -1,0 +1,9 @@
+# Phase 18: Reproducible workload methodology
+
+This microbenchmark measures the Phase 12 `rate_service_check` API, not HTTP or full request parsing. It uses a fixed monotonic time sample so no tokens refill during the measurement and a reproducible finite request count. The warm-up claims IP slots before measuring, so results emphasize the steady-state request path rather than first-time insertion.
+
+Modes: `shared` forces all threads to contend for the same bucket; `sharded` gives each thread a separate IP and bucket. Both retain shared service outcome counters, which can still contend and affect results. Run with one and four threads; compare patterns, not machines. The clock callback is deterministic but executed on every request. Initialization, setup, thread creation and joining are included in elapsed time; pre-warmup is excluded. These choices are explicit and are not pure per-request latency measurements.
+
+Correctness: exactly 65,534 post-warm-up requests can be admitted per preloaded bucket; other attempts are denied. `valid=yes` checks admissions, errors and accounting. Workloads have no external I/O, network, allocations per request or sleeps. Throughput is measured using `CLOCK_MONOTONIC`, in operations/second. Results depend on CPU, scheduling, compiler settings, machine load, power state and time resolution. Repeat tests and report median or distribution, not a single headline number. `ops_per_sec` is a throughput measure; it does not describe p99 latency. This is a baseline, not proof of superiority over mutexes.
+
+Commands: `make benchmark-smoke`, `make workload-bench`, `./build/workload_bench 8 1000000 shared`, `./build/workload_bench 8 1000000 sharded`. Reject invalid thread counts, missing arguments and unknown mode. Build with release flags for comparable results.

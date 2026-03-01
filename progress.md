@@ -519,3 +519,10 @@ Status: complete (static, in-process application policy; NOT a deployed HTTP ser
 
 Improve distribution-level integration and reproducible workload measurement;
 keep the in-process library scope explicit.
+
+## Phase 18 — Reproducible performance workloads (2027-01-01)
+
+- Added fixed-clock shared/sharded throughput driver with deterministic correctness assertions.
+- Added benchmark smoke tests, build targets, and benchmark methodology.
+- Measured throughput excludes first-time slot creation, includes pthread startup/join.
+- Learning PDF remains outside repository.

@@ -423,3 +423,7 @@ make test
 See [`docs/request_policy_configuration.md`](docs/request_policy_configuration.md)
 for precedence, security assumptions, accounting, and concurrency contracts.
 This is still an **in-process** application adapter, not a deployed HTTP server.
+
+## Phase 18: reproducible workloads
+
+Run `make benchmark-smoke` for accounting checks or `make workload-bench` for sample throughput. See `docs/benchmark_methodology.md`; this is an in-process microbenchmark, not HTTP throughput.
