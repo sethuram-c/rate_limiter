@@ -79,7 +79,7 @@ REQUEST_POLICY_SOURCES := src/request_policy.c $(REQUEST_GATEWAY_SOURCES)
 REQUEST_POLICY_TEST_SOURCES := tests/test_request_policy.c $(REQUEST_POLICY_SOURCES)
 REQUEST_POLICY_DEMO_SOURCES := examples/request_policy_demo.c $(REQUEST_POLICY_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke smoke-test run run-live help
+.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke scaling-test scaling-report smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -280,10 +280,16 @@ workload-bench: $(WORKLOAD_BENCH)
 benchmark-smoke: $(WORKLOAD_BENCH)
 	./tests/benchmark_smoke.sh ./$(WORKLOAD_BENCH)
 
+scaling-test: $(WORKLOAD_BENCH)
+	python3 -m unittest discover -s tests -p 'test_scaling_report.py' -v
+
+scaling-report: $(WORKLOAD_BENCH)
+	python3 bench/scaling_report.py --benchmark ./$(WORKLOAD_BENCH) --threads 1,2,4,8 --requests 200000 --repeats 5 --warmups 1
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -323,5 +329,7 @@ help:
 	  'make request-policy-demo   Show advanced policy routes' \
 	  'make workload-bench  Run 1/4-thread sample throughput workloads' \
 	  'make benchmark-smoke Validate benchmark scenario accounting' \
-	  'make test        Run all tests through Phase 18' \
+	  'make scaling-test    Validate Phase 19 statistical reporter' \
+	  'make scaling-report  Run repeated 1/2/4/8-thread scaling suite' \
+	  'make test        Run all tests through Phase 19' \
 	  'make clean       Remove generated build artifacts'

@@ -427,3 +427,14 @@ This is still an **in-process** application adapter, not a deployed HTTP server.
 ## Phase 18: reproducible workloads
 
 Run `make benchmark-smoke` for accounting checks or `make workload-bench` for sample throughput. See `docs/benchmark_methodology.md`; this is an in-process microbenchmark, not HTTP throughput.
+
+## Phase 19: repeated runs and thread scaling
+
+Use `make scaling-test` for the stdlib-only analysis tests and `make scaling-report`
+for repeated fixed-total-request runs at 1/2/4/8 threads. CSV output is written
+to `build/scaling_raw.csv` and `build/scaling_summary.csv` (ignored by Git).
+The report shows median, percentile **run-throughput** ranges, MAD, speedup,
+and efficiency, with correctness checks on each sample. The measurements include
+pthread creation and joining, are not network or latency measurements, and do
+not establish a comparison against a mutex implementation. For methodology and
+Linux tuning commands see [`docs/scaling_analysis.md`](docs/scaling_analysis.md).

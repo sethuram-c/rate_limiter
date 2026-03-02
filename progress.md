@@ -526,3 +526,19 @@ keep the in-process library scope explicit.
 - Added benchmark smoke tests, build targets, and benchmark methodology.
 - Measured throughput excludes first-time slot creation, includes pthread startup/join.
 - Learning PDF remains outside repository.
+
+## Phase 19 - Benchmark repeatability and thread-scaling analysis (2027-01-02)
+
+- Added `bench/scaling_report.py`, a Python-standard-library command-line
+  runner for repeated C workload measurements, run order rotation, robust
+  statistics, and stable raw/summary CSV exports.
+- Added `tests/test_scaling_report.py` with parse/accounting rejection tests,
+  median/p10/p90/MAD/speedup checks and real tiny subprocess integration.
+- Added `make scaling-test` and `make scaling-report` targets; full `make test`
+  includes the new unit/integration checks.
+- Explained what the measured throughput includes and excludes, hardware and
+  sampling caveats, fixed-total-request interpretation, and Linux inspection.
+- Acceptance: 40 recorded default runs and 8 warmup processes, zero accounting
+  errors, correct per-scenario baseline, GCC/Clang regression tests green.
+- Learning PDF is personal and stored outside the repository.
+- Next: add equivalent mutex-protected baseline and controlled A/B comparisons.
