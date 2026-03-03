@@ -37,6 +37,11 @@ REQUEST_POLICY_TEST := $(BUILD_DIR)/test_request_policy
 WORKLOAD_BENCH := $(BUILD_DIR)/workload_bench
 WORKLOAD_BENCH_SOURCES = bench/workload_bench.c $(RATE_SERVICE_SOURCES)
 REQUEST_POLICY_DEMO := $(BUILD_DIR)/request_policy_demo
+MUTEX_TEST := $(BUILD_DIR)/test_mutex_rate_limiter
+MUTEX_COMPARE := $(BUILD_DIR)/mutex_compare
+MUTEX_SOURCES = src/mutex_rate_limiter.c $(IP_ATOMIC_SOURCES) $(STATE_MODEL_SOURCES)
+MUTEX_TEST_SOURCES = tests/test_mutex_rate_limiter.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
+MUTEX_COMPARE_SOURCES = bench/mutex_compare.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -79,7 +84,7 @@ REQUEST_POLICY_SOURCES := src/request_policy.c $(REQUEST_GATEWAY_SOURCES)
 REQUEST_POLICY_TEST_SOURCES := tests/test_request_policy.c $(REQUEST_POLICY_SOURCES)
 REQUEST_POLICY_DEMO_SOURCES := examples/request_policy_demo.c $(REQUEST_POLICY_SOURCES)
 
-.PHONY: all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke scaling-test scaling-report smoke-test run run-live help
+.PHONY: mutex-test mutex-compare-test mutex-compare-report mutex-compare-sample all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke scaling-test scaling-report smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -286,10 +291,30 @@ scaling-test: $(WORKLOAD_BENCH)
 scaling-report: $(WORKLOAD_BENCH)
 	python3 bench/scaling_report.py --benchmark ./$(WORKLOAD_BENCH) --threads 1,2,4,8 --requests 200000 --repeats 5 --warmups 1
 
+$(MUTEX_TEST): $(MUTEX_TEST_SOURCES) include/mutex_rate_limiter.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(MUTEX_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(MUTEX_COMPARE): $(MUTEX_COMPARE_SOURCES) include/mutex_rate_limiter.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(MUTEX_COMPARE_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+mutex-test: $(MUTEX_TEST)
+	./$(MUTEX_TEST)
+
+mutex-compare-test: $(MUTEX_COMPARE)
+	./tests/mutex_benchmark_smoke.sh ./$(MUTEX_COMPARE)
+	python3 -m unittest discover -s tests -p 'test_mutex_compare_report.py' -v
+
+mutex-compare-sample: $(MUTEX_COMPARE)
+	./$(MUTEX_COMPARE) mutex 4 200000 shared
+	./$(MUTEX_COMPARE) lockfree 4 200000 shared
+
+mutex-compare-report: $(MUTEX_COMPARE)
+	python3 bench/mutex_compare_report.py --benchmark ./$(MUTEX_COMPARE) --threads 1,2,4,8 --requests 200000 --repeats 5 --warmups 1
+
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -331,5 +356,9 @@ help:
 	  'make benchmark-smoke Validate benchmark scenario accounting' \
 	  'make scaling-test    Validate Phase 19 statistical reporter' \
 	  'make scaling-report  Run repeated 1/2/4/8-thread scaling suite' \
-	  'make test        Run all tests through Phase 19' \
+	  'make mutex-test     Verify mutex/CAS decision equivalence' \
+	  'make mutex-compare-test   Test fair benchmark and parser' \
+	  'make mutex-compare-sample  Show one shared 4-thread A/B run' \
+	  'make mutex-compare-report  Run repeated paired A/B measurements' \
+	  'make test        Run all tests through Phase 20' \
 	  'make clean       Remove generated build artifacts'

@@ -438,3 +438,27 @@ and efficiency, with correctness checks on each sample. The measurements include
 pthread creation and joining, are not network or latency measurements, and do
 not establish a comparison against a mutex implementation. For methodology and
 Linux tuning commands see [`docs/scaling_analysis.md`](docs/scaling_analysis.md).
+
+
+## Phase 20: mutex bucket reference and controlled A/B comparisons
+
+The repository now provides a pthread-mutex bucket baseline over **the same
+atomic IP index and same pure transition function** as the lock-free version.
+It isolates synchronization strategy rather than comparing unrelated maps.
+Tests verify deterministic equivalence, concurrent aggregate admissions and
+explicit input/table-full behavior before any performance measurement.
+
+```sh
+make mutex-test
+make mutex-compare-test
+make mutex-compare-sample
+make mutex-compare-report
+```
+
+The comparison report exports paired raw samples and median summaries to
+ignored `build/` CSV files. A ratio greater than one means lock-free was faster
+for those particular samples; no universal speedup is claimed. The timed
+section differs from Phase 18's thread-startup-inclusive benchmark. See
+[`docs/mutex_comparison.md`](docs/mutex_comparison.md) for exact methodology,
+limitations, profiling commands and interpretation. The personal learning PDF
+remains outside the repository.

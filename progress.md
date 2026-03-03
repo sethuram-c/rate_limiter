@@ -542,3 +542,22 @@ keep the in-process library scope explicit.
   errors, correct per-scenario baseline, GCC/Clang regression tests green.
 - Learning PDF is personal and stored outside the repository.
 - Next: add equivalent mutex-protected baseline and controlled A/B comparisons.
+
+
+## Phase 20 - Mutex reference baseline and paired throughput (2027-01-03)
+
+- Introduced `mutex_rate_limiter_t`: one pthread mutex per preinitialized
+  token bucket, existing atomic IP lookup/insertion, identical state planner.
+- Added deterministic matching of mutex/CAS outcomes and snapshots, invalid
+  input and table-full checks, and an 8-thread/4-IP admission test.
+- Added a controlled benchmark: fixed time, matched warmups, identical lookup,
+  64 slots, 30,000-token capacity, prestarted threads with atomic start gate.
+- Added Python stdlib paired-run runner with alternating A/B order, raw CSVs,
+  per-mode medians and median of throughput ratios; parser/CLI tests.
+- Explained which costs are isolated, why Phase 18 numbers are not comparable,
+  and why any observed ratio requires repetition and environment details.
+- Acceptance: `make test`, `make mutex-test`, `make mutex-compare-test` pass;
+  distinct shared/sharded runs validate exact admission counts.
+- Personal PDF stays outside Git; source ZIP contains no binaries or `.git`.
+- Updated `.gitignore` for Python bytecode and Phase learning PDFs.
+- Next: richer workloads, hardware counters and careful bottleneck diagnosis.
