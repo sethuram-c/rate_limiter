@@ -561,3 +561,18 @@ keep the in-process library scope explicit.
 - Personal PDF stays outside Git; source ZIP contains no binaries or `.git`.
 - Updated `.gitignore` for Python bytecode and Phase learning PDFs.
 - Next: richer workloads, hardware counters and careful bottleneck diagnosis.
+
+## Phase 21 - Realistic traffic profiles and bottlenecks (2027-01-04)
+
+- Extended Phase 18's deterministic IP generator with reproducible unit/mixed
+  token-cost generation (80% one-token, 20% three-token requests).
+- Added `bench/realistic_traffic_bench.c` supporting mutex and lock-free
+  implementations, hot/uniform/skewed traffic, 1..16 threads and 1..1024 IPs.
+- Prepopulated all IP slots before the timer and used an atomic start gate.
+- Verified per-IP token conservation under mixed weights after threads join.
+- Added repeated paired workload-matrix reporter with raw and summary CSVs,
+  alternating implementation order and validated throughput/accounting.
+- Added workload distribution tests, reporter tests and integration smoke runs.
+- Added `docs/traffic_bottlenecks.md` with profiling methodology and limits.
+- Source ZIP contains full project; personal learning PDF stays outside Git.
+- Next: use profiling evidence to evaluate a justified, measurable optimization.

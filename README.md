@@ -462,3 +462,22 @@ section differs from Phase 18's thread-startup-inclusive benchmark. See
 [`docs/mutex_comparison.md`](docs/mutex_comparison.md) for exact methodology,
 limitations, profiling commands and interpretation. The personal learning PDF
 remains outside the repository.
+
+## Phase 21: realistic synthetic traffic and bottleneck analysis
+
+The `realistic_traffic_bench` driver evaluates the mutex and CAS buckets on
+identical seeded hot, uniform and skewed request streams, with unit or mixed
+request costs. It validates **per-IP token budgets** after joining threads,
+not just request counts, and writes repeated paired results to ignored CSVs.
+
+```sh
+make traffic-profile-test
+make traffic-profile-sample
+make traffic-profile-report
+./build/realistic_traffic_bench lockfree 8 100000 skewed 64 mixed 20270104
+```
+
+See [`docs/traffic_bottlenecks.md`](docs/traffic_bottlenecks.md) for the
+benchmark contract, profiling commands, limitations, and analysis. The timed
+metric is attempted in-memory requests per second, not HTTP RPS; results
+from a single run must not be used as a resume performance claim.

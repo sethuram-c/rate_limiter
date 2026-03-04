@@ -42,6 +42,10 @@ MUTEX_COMPARE := $(BUILD_DIR)/mutex_compare
 MUTEX_SOURCES = src/mutex_rate_limiter.c $(IP_ATOMIC_SOURCES) $(STATE_MODEL_SOURCES)
 MUTEX_TEST_SOURCES = tests/test_mutex_rate_limiter.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
 MUTEX_COMPARE_SOURCES = bench/mutex_compare.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
+TRAFFIC_PROFILE_BENCH := $(BUILD_DIR)/realistic_traffic_bench
+TRAFFIC_PROFILE_BENCH_SOURCES = bench/realistic_traffic_bench.c src/traffic_workload.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
+TRAFFIC_WORKLOAD_TEST := $(BUILD_DIR)/test_traffic_workload
+
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
@@ -84,7 +88,7 @@ REQUEST_POLICY_SOURCES := src/request_policy.c $(REQUEST_GATEWAY_SOURCES)
 REQUEST_POLICY_TEST_SOURCES := tests/test_request_policy.c $(REQUEST_POLICY_SOURCES)
 REQUEST_POLICY_DEMO_SOURCES := examples/request_policy_demo.c $(REQUEST_POLICY_SOURCES)
 
-.PHONY: mutex-test mutex-compare-test mutex-compare-report mutex-compare-sample all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke scaling-test scaling-report smoke-test run run-live help
+.PHONY: traffic-profile-test traffic-profile-sample traffic-profile-report mutex-test mutex-compare-test mutex-compare-report mutex-compare-sample all clean test unit-test properties-test atomic-test atomic-demo state-test state-demo lockfree-test lockfree-demo contention-test ip-plan-test ip-plan-demo ip-atomic-test ip-atomic-demo ip-rate-test ip-rate-demo rate-service-test rate-service-demo rate-config-test rate-config-demo rate-diagnostics-test rate-diagnostics-demo rate-status-test rate-status-demo request-gateway-test request-gateway-demo request-policy-test request-policy-demo workload-bench benchmark-smoke scaling-test scaling-report smoke-test run run-live help
 
 all: $(TARGET)
 
@@ -297,6 +301,23 @@ $(MUTEX_TEST): $(MUTEX_TEST_SOURCES) include/mutex_rate_limiter.h | $(BUILD_DIR)
 $(MUTEX_COMPARE): $(MUTEX_COMPARE_SOURCES) include/mutex_rate_limiter.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(MUTEX_COMPARE_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
 
+$(TRAFFIC_PROFILE_BENCH): $(TRAFFIC_PROFILE_BENCH_SOURCES) include/traffic_workload.h include/mutex_rate_limiter.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(TRAFFIC_PROFILE_BENCH_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(TRAFFIC_WORKLOAD_TEST): tests/test_traffic_workload.c src/traffic_workload.c include/traffic_workload.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_traffic_workload.c src/traffic_workload.c $(LDFLAGS) $(LDLIBS) -o $@
+
+traffic-profile-test: $(TRAFFIC_PROFILE_BENCH) $(TRAFFIC_WORKLOAD_TEST)
+	./$(TRAFFIC_WORKLOAD_TEST)
+	python3 -m unittest discover -s tests -p 'test_traffic_profile_report.py' -v
+
+traffic-profile-sample: $(TRAFFIC_PROFILE_BENCH)
+	./$(TRAFFIC_PROFILE_BENCH) mutex 4 30000 skewed 64 mixed
+	./$(TRAFFIC_PROFILE_BENCH) lockfree 4 30000 skewed 64 mixed
+
+traffic-profile-report: $(TRAFFIC_PROFILE_BENCH)
+	python3 bench/traffic_profile_report.py --benchmark ./$(TRAFFIC_PROFILE_BENCH) --threads 1,4,8 --requests 50000 --ips 64 --repeats 3 --warmups 1
+
 mutex-test: $(MUTEX_TEST)
 	./$(MUTEX_TEST)
 
@@ -314,7 +335,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -360,5 +381,8 @@ help:
 	  'make mutex-compare-test   Test fair benchmark and parser' \
 	  'make mutex-compare-sample  Show one shared 4-thread A/B run' \
 	  'make mutex-compare-report  Run repeated paired A/B measurements' \
-	  'make test        Run all tests through Phase 20' \
+	  'make traffic-profile-test    Validate deterministic weighted traffic and A/B reports' \
+	  'make traffic-profile-sample  Show one skewed mixed-cost A/B example' \
+	  'make traffic-profile-report  Repeated hot/uniform/skewed matrix in CSV' \
+	  'make test        Run all tests through Phase 21' \
 	  'make clean       Remove generated build artifacts'
