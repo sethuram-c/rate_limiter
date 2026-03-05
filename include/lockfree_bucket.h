@@ -21,10 +21,26 @@
  * A failed lock-free capability check means initialization fails.
  * This module does not allocate memory, spin on a mutex, or call the clock.
  */
+/*
+ * Phase 22: optional cache-line-isolated state layout for A/B experiments.
+ * Compile EVERY translation unit including this header with the same flag.
+ * The default compact layout and its memory footprint remain unchanged.
+ * A 64-byte cache line is an experiment assumption, not a CPU guarantee.
+ */
 typedef struct {
+#ifdef RL_CACHELINE_PADDED
+    _Alignas(64) _Atomic uint64_t state; /* exactly one state per aligned slot */
+    bucket_policy_t policy;            /* immutable after publication */
+#else
     bucket_policy_t policy;  /* immutable after successful init */
     _Atomic uint64_t state;  /* 48-bit anchor_ms | 16-bit tokens */
+#endif
 } lf_bucket_t;
+
+#ifdef RL_CACHELINE_PADDED
+_Static_assert(_Alignof(lf_bucket_t) >= 64U, "padded buckets must align to 64");
+_Static_assert(sizeof(lf_bucket_t) == 64U, "padded buckets must have 64-byte stride");
+#endif
 
 /* Initialize a FULL bucket. Returns false for bad input or non-lock-free target. */
 bool lf_bucket_init(lf_bucket_t *bucket, const bucket_policy_t *policy,

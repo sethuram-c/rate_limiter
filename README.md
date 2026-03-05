@@ -481,3 +481,23 @@ See [`docs/traffic_bottlenecks.md`](docs/traffic_bottlenecks.md) for the
 benchmark contract, profiling commands, limitations, and analysis. The timed
 metric is attempted in-memory requests per second, not HTTP RPS; results
 from a single run must not be used as a resume performance claim.
+
+## Phase 22: optional cache-line-isolated buckets
+
+A second **build-time** layout isolates the atomic state of each lock-free
+per-IP bucket on an assumed 64-byte cache line. The original compact layout
+remains the default; compile the entire project consistently with
+`-DRL_CACHELINE_PADDED` to select the padded ABI.
+
+```sh
+make cacheline-test
+make cacheline-sample
+make cacheline-report
+```
+
+The two benchmark binaries measure identical seeded traffic (compact vs
+padded), write ignored CSV samples and validate per-IP token conservation.
+Padding costs additional memory and was not consistently faster in the
+measured environment. See [docs/cacheline_experiment.md](docs/cacheline_experiment.md)
+for correctness, experimental controls, profiler commands and limitations.
+Keep the personal Phase 22 learning PDF outside the repository.

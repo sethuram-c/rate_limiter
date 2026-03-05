@@ -45,6 +45,9 @@ MUTEX_COMPARE_SOURCES = bench/mutex_compare.c src/mutex_rate_limiter.c $(IP_RATE
 TRAFFIC_PROFILE_BENCH := $(BUILD_DIR)/realistic_traffic_bench
 TRAFFIC_PROFILE_BENCH_SOURCES = bench/realistic_traffic_bench.c src/traffic_workload.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES)
 TRAFFIC_WORKLOAD_TEST := $(BUILD_DIR)/test_traffic_workload
+CACHELINE_BENCH_PADDED := $(BUILD_DIR)/realistic_traffic_bench_padded
+CACHELINE_TEST_COMPACT := $(BUILD_DIR)/test_cacheline_layout_compact
+CACHELINE_TEST_PADDED := $(BUILD_DIR)/test_cacheline_layout_padded
 
 
 SOURCES := src/main.c src/token_bucket.c src/monotonic_clock.c
@@ -304,6 +307,28 @@ $(MUTEX_COMPARE): $(MUTEX_COMPARE_SOURCES) include/mutex_rate_limiter.h | $(BUIL
 $(TRAFFIC_PROFILE_BENCH): $(TRAFFIC_PROFILE_BENCH_SOURCES) include/traffic_workload.h include/mutex_rate_limiter.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(TRAFFIC_PROFILE_BENCH_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
 
+$(CACHELINE_BENCH_PADDED): $(TRAFFIC_PROFILE_BENCH_SOURCES) include/lockfree_bucket.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DRL_CACHELINE_PADDED -pthread $(TRAFFIC_PROFILE_BENCH_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(CACHELINE_TEST_COMPACT): tests/test_cacheline_layout.c $(IP_RATE_SOURCES) include/lockfree_bucket.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread tests/test_cacheline_layout.c $(IP_RATE_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(CACHELINE_TEST_PADDED): tests/test_cacheline_layout.c $(IP_RATE_SOURCES) include/lockfree_bucket.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DRL_CACHELINE_PADDED -pthread tests/test_cacheline_layout.c $(IP_RATE_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+.PHONY: cacheline-test cacheline-sample cacheline-report
+cacheline-test: $(CACHELINE_TEST_COMPACT) $(CACHELINE_TEST_PADDED) $(TRAFFIC_PROFILE_BENCH) $(CACHELINE_BENCH_PADDED)
+	./$(CACHELINE_TEST_COMPACT)
+	./$(CACHELINE_TEST_PADDED)
+	python3 -m unittest discover -s tests -p 'test_cacheline_report.py' -v
+
+cacheline-sample: $(TRAFFIC_PROFILE_BENCH) $(CACHELINE_BENCH_PADDED)
+	./$(TRAFFIC_PROFILE_BENCH) lockfree 4 100000 uniform 64 unit 20270105
+	./$(CACHELINE_BENCH_PADDED) lockfree 4 100000 uniform 64 unit 20270105
+
+cacheline-report: $(TRAFFIC_PROFILE_BENCH) $(CACHELINE_BENCH_PADDED)
+	python3 bench/cacheline_report.py --compact ./$(TRAFFIC_PROFILE_BENCH) --padded ./$(CACHELINE_BENCH_PADDED) --threads 1,4,8 --patterns uniform,skewed --requests 60000 --ips 64 --repeats 3 --warmups 1
+
 $(TRAFFIC_WORKLOAD_TEST): tests/test_traffic_workload.c src/traffic_workload.c include/traffic_workload.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_traffic_workload.c src/traffic_workload.c $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -335,7 +360,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -384,5 +409,8 @@ help:
 	  'make traffic-profile-test    Validate deterministic weighted traffic and A/B reports' \
 	  'make traffic-profile-sample  Show one skewed mixed-cost A/B example' \
 	  'make traffic-profile-report  Repeated hot/uniform/skewed matrix in CSV' \
-	  'make test        Run all tests through Phase 21' \
+	  'make cacheline-test   Check compact and 64-byte isolated bucket layouts' \
+	  'make cacheline-sample Display matched compact versus padded runs' \
+	  'make cacheline-report Paired repeated bucket-layout comparisons' \
+	  'make test        Run all tests through Phase 22' \
 	  'make clean       Remove generated build artifacts'

@@ -576,3 +576,18 @@ keep the in-process library scope explicit.
 - Added `docs/traffic_bottlenecks.md` with profiling methodology and limits.
 - Source ZIP contains full project; personal learning PDF stays outside Git.
 - Next: use profiling evidence to evaluate a justified, measurable optimization.
+
+## Phase 22 - Cache-line contention A/B experiment (2027-01-05)
+
+- Preserved compact lock-free bucket as default while adding an opt-in
+  `RL_CACHELINE_PADDED` build with 64-byte-aligned atomic state.
+- Allocated the padded array with C11 `aligned_alloc`, retaining correct
+  per-build `sizeof(lf_bucket_t)` resource estimates and free semantics.
+- Added identical compact/padded correctness tests: 80,000 attempts per
+  variant, 328 successful admissions, no token overspending.
+- Added a real-traffic paired-run reporter, validated raw/summary CSVs,
+  alternating order and unit tests. Observed mixed results; did not enable
+  padding globally or claim a universal optimization.
+- Added cacheline test, sample and report Makefile targets.
+- Learning PDF remains outside the Git repository.
+- Next: investigate per-operation latency and tail distributions.

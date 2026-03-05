@@ -24,7 +24,14 @@ bool ip_rate_limiter_init(ip_rate_limiter_t *limiter, size_t slots,
     if (!ip_atomic_table_init(&limiter->index, slots)) {
         return false;
     }
+    /* Aligned objects require aligned allocation, not ordinary malloc.
+     * A power-of-two slot count and the 64-byte type size satisfy C11's
+     * aligned_alloc(size multiple of alignment) requirement. */
+#ifdef RL_CACHELINE_PADDED
+    buckets = aligned_alloc(_Alignof(lf_bucket_t), slots * sizeof(*buckets));
+#else
     buckets = malloc(slots * sizeof(*buckets));
+#endif
     if (buckets == NULL) {
         ip_atomic_table_destroy(&limiter->index);
         return false;
