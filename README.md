@@ -501,3 +501,6 @@ Padding costs additional memory and was not consistently faster in the
 measured environment. See [docs/cacheline_experiment.md](docs/cacheline_experiment.md)
 for correctness, experimental controls, profiler commands and limitations.
 Keep the personal Phase 22 learning PDF outside the repository.
+
+### Phase 23 latency analysis
+Run `make latency-test` and `make latency-sample` to inspect per-operation p50/p95/p99; see `docs/latency_analysis.md`.

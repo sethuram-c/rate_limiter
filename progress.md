@@ -591,3 +591,5 @@ keep the in-process library scope explicit.
 - Added cacheline test, sample and report Makefile targets.
 - Learning PDF remains outside the Git repository.
 - Next: investigate per-operation latency and tail distributions.
+
+- Phase 23: request-level latency sample collection, nearest-rank percentiles, and test coverage.

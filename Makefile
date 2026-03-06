@@ -360,7 +360,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -412,5 +412,17 @@ help:
 	  'make cacheline-test   Check compact and 64-byte isolated bucket layouts' \
 	  'make cacheline-sample Display matched compact versus padded runs' \
 	  'make cacheline-report Paired repeated bucket-layout comparisons' \
-	  'make test        Run all tests through Phase 22' \
+	  'make latency-test Validate p50/p95/p99 latency output'
+	  'make test        Run all tests through Phase 23' \
 	  'make clean       Remove generated build artifacts'
+
+# Phase 23: request-level latency, separate from wall-clock throughput.
+LATENCY_BENCH := $(BUILD_DIR)/latency_bench
+$(LATENCY_BENCH): bench/latency_bench.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread bench/latency_bench.c src/mutex_rate_limiter.c $(IP_RATE_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+.PHONY: latency-test latency-sample
+latency-test: $(LATENCY_BENCH)
+	python3 tests/test_latency_bench.py ./$(LATENCY_BENCH)
+latency-sample: $(LATENCY_BENCH)
+	./$(LATENCY_BENCH) mutex 4 20000 shared
+	./$(LATENCY_BENCH) lockfree 4 20000 shared

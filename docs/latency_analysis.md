@@ -1,0 +1,7 @@
+# Phase 23: request latency and tail behavior
+
+`make latency-test` validates that both implementations return correctly ordered nearest-rank percentiles. `make latency-sample` runs small exploratory paired samples. Samples measure a single bucket admission operation plus the two `clock_gettime(CLOCK_MONOTONIC)` reads, so values include instrumentation overhead. A separate wall-clock timer measures benchmark throughput. `p99` is the 99th percentile and *not* the maximum, and cannot be inferred from average throughput. This is in-process C code, not HTTP request latency. Tests use a frozen rate-limiter time to make admission totals deterministic; clock time for measurement continues advancing.
+
+Measurement design: initialize and prepopulate buckets before the synchronized start; each worker owns a disjoint slice of the sample array; merge and sort only after joins; compute nearest-rank percentile for p in {50,95,99}. Limit samples to 200,000 to bound RAM and perturbation. Compare both `shared` and `sharded` configurations across repeated runs on the same host. Ordering between modes can change with scheduler load, CPU frequency, cache state and clock overhead. Avoid claiming universal superiority.
+
+Caution: per-request timestamping can materially depress throughput and distort tails; do not compare instrumented throughput against Phase 20's uninstrumented benchmark. If you need less perturbation, measure a fixed sample of operations or use external profilers. Do not place learning PDFs in Git.
