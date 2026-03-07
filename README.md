@@ -504,3 +504,23 @@ Keep the personal Phase 22 learning PDF outside the repository.
 
 ### Phase 23 latency analysis
 Run `make latency-test` and `make latency-sample` to inspect per-operation p50/p95/p99; see `docs/latency_analysis.md`.
+
+## Phase 24 - Allocation failure safety and lifecycle
+
+The project now offers optional deterministic allocation failure injection
+via `rl_allocator_t`, `ip_atomic_table_init_with_allocator()` and
+`ip_rate_limiter_init_with_allocator()`. The default APIs remain unchanged.
+The allocator callbacks are invoked only during initialization and
+**quiescent** destruction. They are never invoked by request processing.
+
+```bash
+make lifecycle-test
+make lifecycle-test-padded
+```
+
+The focused tests force failure of the first and second allocation, assert
+rollback with no live blocks, check retry after failure, double destruction,
+and custom allocator alignment. See `docs/resource_lifecycle.md`.
+
+**Lifetime constraint:** never free, move, reconfigure, or destroy a limiter
+until all user threads have stopped and joined.

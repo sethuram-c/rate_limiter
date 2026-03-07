@@ -1,7 +1,7 @@
 #include "ip_atomic_table.h"
 #include "ip_table_plan.h"
 
-#include <stdlib.h>
+
 
 #define IP_ATOMIC_OCCUPIED (UINT64_C(1) << 32)
 
@@ -16,17 +16,21 @@ static uint64_t encode(uint32_t ip)
     return IP_ATOMIC_OCCUPIED | (uint64_t)ip;
 }
 
-bool ip_atomic_table_init(ip_atomic_table_t *table, size_t capacity)
+bool ip_atomic_table_init_with_allocator(ip_atomic_table_t *table,
+                                         size_t capacity,
+                                         const rl_allocator_t *allocator)
 {
     ip_atomic_slot_t *slots;
     size_t i;
 
     if (table == NULL || table->slots != NULL || table->capacity != 0U ||
         !ip_table_plan_valid_capacity(capacity) ||
-        capacity > SIZE_MAX / sizeof(ip_atomic_slot_t)) {
+        capacity > SIZE_MAX / sizeof(ip_atomic_slot_t) ||
+        !rl_allocator_valid(allocator)) {
         return false;
     }
-    slots = malloc(capacity * sizeof(*slots));
+    slots = rl_allocator_alloc(allocator, _Alignof(ip_atomic_slot_t),
+                               capacity * sizeof(*slots));
     if (slots == NULL) {
         return false;
     }
@@ -34,20 +38,30 @@ bool ip_atomic_table_init(ip_atomic_table_t *table, size_t capacity)
         atomic_init(&slots[i].key, UINT64_C(0));
     }
     if (!atomic_is_lock_free(&slots[0].key)) {
-        free(slots);
+        rl_allocator_free(allocator, slots);
         return false;
     }
     table->slots = slots;
     table->capacity = capacity;
+    if (allocator != NULL) {
+        table->allocator = *allocator;
+    }
     return true;
+}
+
+bool ip_atomic_table_init(ip_atomic_table_t *table, size_t capacity)
+{
+    return ip_atomic_table_init_with_allocator(table, capacity, NULL);
 }
 
 void ip_atomic_table_destroy(ip_atomic_table_t *table)
 {
     if (table != NULL) {
-        free(table->slots);
+        rl_allocator_free(table->allocator.allocate != NULL
+                          ? &table->allocator : NULL, table->slots);
         table->slots = NULL;
         table->capacity = 0U;
+        table->allocator = (rl_allocator_t){0};
     }
 }
 

@@ -27,6 +27,7 @@
 typedef struct {
     ip_atomic_table_t index;
     lf_bucket_t *buckets;
+    rl_allocator_t allocator; /* bucket lifetime, no hot-path callback */
 } ip_rate_limiter_t;
 
 typedef enum {
@@ -39,6 +40,16 @@ typedef enum {
 /* limiter must start as {0}. All buckets start full with the same policy. */
 bool ip_rate_limiter_init(ip_rate_limiter_t *limiter, size_t slots,
                           const bucket_policy_t *policy, uint64_t now_ms);
+
+/* Phase 24: all-or-nothing initialization with injectable allocator.
+ * On failure the zero-initialized limiter is reusable without a destroy.
+ * Two array allocations are attempted in order: IP slots, token buckets.
+ * Destroy after joining ALL users, including for a custom allocator. */
+bool ip_rate_limiter_init_with_allocator(ip_rate_limiter_t *limiter,
+                                         size_t slots,
+                                         const bucket_policy_t *policy,
+                                         uint64_t now_ms,
+                                         const rl_allocator_t *allocator);
 
 /* Quiescent-only destruction: caller must stop/join all users first. */
 void ip_rate_limiter_destroy(ip_rate_limiter_t *limiter);

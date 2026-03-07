@@ -593,3 +593,16 @@ keep the in-process library scope explicit.
 - Next: investigate per-operation latency and tail distributions.
 
 - Phase 23: request-level latency sample collection, nearest-rank percentiles, and test coverage.
+
+## Phase 24 - Resource lifecycle and deterministic failure injection (2027-01-07)
+
+- Added an optional quiescent-only allocator interface and matching free
+  callback, preserving existing default initialization APIs.
+- Added deterministic failure injection for both allocations, verifying
+  correct rollback, reinitialization after failed init, and double destroy.
+- Applied the allocator to both atomic key index and bucket arrays; padded
+  builds request the correct 64-byte alignment.
+- Maintained the no-allocation hot path and quiescent teardown contract.
+- Added `make lifecycle-test` and `make lifecycle-test-padded` to the suite.
+- Personal educational PDF lives outside Git.
+- Next: deeper sanitizer/TSan review and concurrency lifetime auditing.

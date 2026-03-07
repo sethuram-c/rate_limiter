@@ -1,6 +1,8 @@
 #ifndef IP_ATOMIC_TABLE_H
 #define IP_ATOMIC_TABLE_H
 
+#include "rate_allocator.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,6 +29,7 @@ typedef struct {
 typedef struct {
     size_t capacity;
     ip_atomic_slot_t *slots;
+    rl_allocator_t allocator; /* copied at init, used for quiescent release */
 } ip_atomic_table_t;
 
 typedef enum {
@@ -45,6 +48,12 @@ typedef struct {
  * Allocation happens HERE, not on the concurrent insertion path.
  * Fails if the platform lacks lock-free 64-bit atomic slots. */
 bool ip_atomic_table_init(ip_atomic_table_t *table, size_t capacity);
+
+/* Phase 24: optional deterministic allocation failure injection.
+ * NULL allocator selects the default C11 malloc/free allocator. */
+bool ip_atomic_table_init_with_allocator(ip_atomic_table_t *table,
+                                         size_t capacity,
+                                         const rl_allocator_t *allocator);
 
 /* Caller must first stop/join all table users. */
 void ip_atomic_table_destroy(ip_atomic_table_t *table);

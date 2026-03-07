@@ -22,6 +22,8 @@ IP_PLAN_DEMO := $(BUILD_DIR)/ip_table_plan_demo
 IP_ATOMIC_TEST := $(BUILD_DIR)/test_ip_atomic_table
 IP_ATOMIC_DEMO := $(BUILD_DIR)/ip_atomic_table_demo
 IP_RATE_TEST := $(BUILD_DIR)/test_ip_rate_limiter
+LIFECYCLE_TEST := $(BUILD_DIR)/test_resource_lifecycle
+LIFECYCLE_TEST_PADDED := $(BUILD_DIR)/test_resource_lifecycle_padded
 IP_RATE_DEMO := $(BUILD_DIR)/ip_rate_limiter_demo
 RATE_SERVICE_TEST := $(BUILD_DIR)/test_rate_service
 RATE_SERVICE_DEMO := $(BUILD_DIR)/rate_service_demo
@@ -68,11 +70,12 @@ CONTENTION_TEST_SOURCES := tests/test_contention.c tests/linearizability_check.c
 IP_PLAN_SOURCES := src/ip_table_plan.c
 IP_PLAN_TEST_SOURCES := tests/test_ip_table_plan.c $(IP_PLAN_SOURCES)
 IP_PLAN_DEMO_SOURCES := examples/ip_table_plan_demo.c $(IP_PLAN_SOURCES)
-IP_ATOMIC_SOURCES := src/ip_atomic_table.c $(IP_PLAN_SOURCES)
+IP_ATOMIC_SOURCES := src/ip_atomic_table.c src/rate_allocator.c $(IP_PLAN_SOURCES)
 IP_ATOMIC_TEST_SOURCES := tests/test_ip_atomic_table.c $(IP_ATOMIC_SOURCES)
 IP_ATOMIC_DEMO_SOURCES := examples/ip_atomic_table_demo.c $(IP_ATOMIC_SOURCES)
 IP_RATE_SOURCES := src/ip_rate_limiter.c $(IP_ATOMIC_SOURCES) $(LOCKFREE_SOURCES)
 IP_RATE_TEST_SOURCES := tests/test_ip_rate_limiter.c $(IP_RATE_SOURCES)
+LIFECYCLE_TEST_SOURCES := tests/test_resource_lifecycle.c $(IP_RATE_SOURCES)
 IP_RATE_DEMO_SOURCES := examples/ip_rate_limiter_demo.c $(IP_RATE_SOURCES)
 RATE_SERVICE_SOURCES := src/rate_service.c src/rate_config.c src/monotonic_clock.c $(IP_RATE_SOURCES)
 RATE_SERVICE_TEST_SOURCES := tests/test_rate_service.c $(RATE_SERVICE_SOURCES)
@@ -150,6 +153,12 @@ $(IP_ATOMIC_DEMO): $(IP_ATOMIC_DEMO_SOURCES) include/ip_atomic_table.h include/i
 $(IP_RATE_TEST): $(IP_RATE_TEST_SOURCES) include/ip_rate_limiter.h include/ip_atomic_table.h include/lockfree_bucket.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(IP_RATE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
 
+$(LIFECYCLE_TEST): $(LIFECYCLE_TEST_SOURCES) include/rate_allocator.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(LIFECYCLE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(LIFECYCLE_TEST_PADDED): $(LIFECYCLE_TEST_SOURCES) include/rate_allocator.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DRL_CACHELINE_PADDED -pthread $(LIFECYCLE_TEST_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
 $(IP_RATE_DEMO): $(IP_RATE_DEMO_SOURCES) include/ip_rate_limiter.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(IP_RATE_DEMO_SOURCES) $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -201,7 +210,7 @@ run: $(TARGET)
 run-live: $(TARGET)
 	./$(TARGET) --live
 
-unit-test: $(BUCKET_TEST) $(CLOCK_TEST)
+unit-test: lifecycle-test lifecycle-test-padded $(BUCKET_TEST) $(CLOCK_TEST)
 	./$(BUCKET_TEST)
 	./$(CLOCK_TEST)
 
@@ -426,3 +435,10 @@ latency-test: $(LATENCY_BENCH)
 latency-sample: $(LATENCY_BENCH)
 	./$(LATENCY_BENCH) mutex 4 20000 shared
 	./$(LATENCY_BENCH) lockfree 4 20000 shared
+
+.PHONY: lifecycle-test lifecycle-test-padded
+lifecycle-test: $(LIFECYCLE_TEST)
+	./$(LIFECYCLE_TEST)
+
+lifecycle-test-padded: $(LIFECYCLE_TEST_PADDED)
+	./$(LIFECYCLE_TEST_PADDED)
