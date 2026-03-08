@@ -524,3 +524,25 @@ and custom allocator alignment. See `docs/resource_lifecycle.md`.
 
 **Lifetime constraint:** never free, move, reconfigure, or destroy a limiter
 until all user threads have stopped and joined.
+
+## Phase 25 - Concurrency audit and sanitizer diagnostics
+
+The focused audit exercises 160,000 fixed-time concurrent requests against 16
+IP addresses and verifies exact admission/invalid/denial totals, per-IP tokens,
+atomic service counters and quiescent teardown. Compact and padded layouts are
+both tested. Sanitizer checks do not replace review of memory ordering and
+object lifetime.
+
+```sh
+make audit-test audit-test-padded audit-runner-test
+make audit-asan  # AddressSanitizer + UndefinedBehaviorSanitizer, instrumented
+make audit-tsan  # ThreadSanitizer; returns 77 if runtime is unsupported
+make benchmark-cli-test  # previously untracked Phase 18 CLI benchmark sources
+make benchmark-cli-sample
+```
+
+`bench/benchmark_rate_service.c` and `tests/test_benchmark.sh` are now tracked
+by Git and integrated into the Makefile. Keep all generated cache directories,
+CSV results and private learning PDFs outside version control. See
+[docs/concurrency_safety_audit.md](docs/concurrency_safety_audit.md) for the
+contracts, expected results, sanitizer statuses and audit checklist.

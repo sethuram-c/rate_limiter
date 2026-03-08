@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -421,8 +421,14 @@ help:
 	  'make cacheline-test   Check compact and 64-byte isolated bucket layouts' \
 	  'make cacheline-sample Display matched compact versus padded runs' \
 	  'make cacheline-report Paired repeated bucket-layout comparisons' \
-	  'make latency-test Validate p50/p95/p99 latency output'
-	  'make test        Run all tests through Phase 23' \
+	  'make latency-test Validate p50/p95/p99 latency output' \
+	  'make benchmark-cli-test Test rate-service benchmark CLI and accounting' \
+	  'make audit-test      Run concurrent request and lifecycle invariants' \
+	  'make audit-test-padded  Audit padded bucket layout' \
+	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
+	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
+	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
+	  'make test        Run all regression tests through Phase 25' \
 	  'make clean       Remove generated build artifacts'
 
 # Phase 23: request-level latency, separate from wall-clock throughput.
@@ -442,3 +448,53 @@ lifecycle-test: $(LIFECYCLE_TEST)
 
 lifecycle-test-padded: $(LIFECYCLE_TEST_PADDED)
 	./$(LIFECYCLE_TEST_PADDED)
+
+# Phase 25: sanitizer-focused concurrency audit and previously untracked
+# Phase 18 rate-service benchmark integration.
+RATE_SERVICE_BENCH := $(BUILD_DIR)/benchmark_rate_service
+RATE_SERVICE_BENCH_SOURCES := bench/benchmark_rate_service.c src/traffic_workload.c $(RATE_SERVICE_SOURCES)
+AUDIT_TEST := $(BUILD_DIR)/test_concurrency_audit
+AUDIT_ASAN := $(BUILD_DIR)/test_concurrency_audit_asan
+AUDIT_TSAN := $(BUILD_DIR)/test_concurrency_audit_tsan
+AUDIT_PADDED := $(BUILD_DIR)/test_concurrency_audit_padded
+AUDIT_SOURCES := tests/test_concurrency_audit.c $(RATE_SERVICE_SOURCES)
+AUDIT_SAN_FLAGS := -std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fno-omit-frame-pointer
+
+$(RATE_SERVICE_BENCH): $(RATE_SERVICE_BENCH_SOURCES) include/traffic_workload.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(RATE_SERVICE_BENCH_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(AUDIT_TEST): $(AUDIT_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(AUDIT_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(AUDIT_PADDED): $(AUDIT_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DRL_CACHELINE_PADDED -pthread $(AUDIT_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+$(AUDIT_ASAN): $(AUDIT_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(AUDIT_SAN_FLAGS) -fsanitize=address,undefined -pthread $(AUDIT_SOURCES) $(LDFLAGS) -fsanitize=address,undefined $(LDLIBS) -pthread -o $@
+
+$(AUDIT_TSAN): $(AUDIT_SOURCES) include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(AUDIT_SAN_FLAGS) -fsanitize=thread -pthread $(AUDIT_SOURCES) $(LDFLAGS) -fsanitize=thread $(LDLIBS) -pthread -o $@
+
+.PHONY: benchmark-cli-test benchmark-cli-sample audit-test audit-test-padded audit-runner-test audit-asan audit-tsan
+benchmark-cli-test: $(RATE_SERVICE_BENCH)
+	./tests/test_benchmark.sh ./$(RATE_SERVICE_BENCH)
+
+benchmark-cli-sample: $(RATE_SERVICE_BENCH)
+	./$(RATE_SERVICE_BENCH) --threads 4 --requests 25000 --ips 64 --pattern skewed --seed 25 --capacity 31 --csv
+
+audit-test: $(AUDIT_TEST)
+	./$(AUDIT_TEST)
+
+audit-test-padded: $(AUDIT_PADDED)
+	./$(AUDIT_PADDED)
+
+audit-asan: $(AUDIT_ASAN)
+	ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ./$(AUDIT_ASAN)
+
+# TSAN returns exit status 77 when the runtime cannot start. This is NOT a pass.
+audit-tsan: $(AUDIT_TSAN)
+	./tests/run_tsan.sh ./$(AUDIT_TSAN)
+
+# Exercise the wrapper even on hosts where TSAN runtime support is unavailable.
+audit-runner-test:
+	./tests/test_tsan_runner.sh

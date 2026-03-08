@@ -606,3 +606,19 @@ keep the in-process library scope explicit.
 - Added `make lifecycle-test` and `make lifecycle-test-padded` to the suite.
 - Personal educational PDF lives outside Git.
 - Next: deeper sanitizer/TSan review and concurrency lifetime auditing.
+
+## Phase 25 - Concurrency safety audit and sanitizer verification (2027-01-08)
+
+- Added deterministic 8-thread / 16-IP concurrency audit (160,000 requests):
+  exactly 496 admissions, 32,000 invalid calls and 127,504 quota denials.
+- Cross-checked thread-local request outcomes against atomic service counters
+  and inspected post-join bucket tokens and occupied table slots.
+- Tested compact and padded layouts and repeated quiescent init/destroy.
+- Added explicit GCC/Clang full-suite verification and focused ASan+UBSan,
+  ThreadSanitizer targets; TSAN wrapper distinguishes PASS/SKIP/FAIL.
+- Restored benchmark-rate-service CLI and test runner missing from earlier
+  git staging instructions, and ignored Python bytecode/cache directories.
+- Reviewed atomic publication, object lifetime, memory-order contracts and
+  what negative sanitizer findings can and cannot establish.
+- The private Phase 25 study PDF stays **outside the Git repository**.
+- Next: automation/CI and cross-toolchain verification.
