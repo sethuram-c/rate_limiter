@@ -1,0 +1,52 @@
+# Phase 26: build and test every push, pull request and manual run.
+name: C11 Build and Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# No write permissions are necessary for building or testing.
+permissions:
+  contents: read
+
+jobs:
+  compiler-matrix:
+    name: Build and test (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Report compiler and Python versions
+        run: |
+          ${{ matrix.compiler }} --version
+          python3 --version
+      - name: Build with strict C11 warnings
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          make CC="$CC" clean
+          make CC="$CC" -j2 all
+      - name: Run full regression suite
+        env:
+          CC: ${{ matrix.compiler }}
+        run: make CC="$CC" test
+
+  sanitizers:
+    name: Address and undefined behavior sanitizers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Test concurrent audit with ASan and UBSan
+        run: make CC=gcc audit-asan
+
+# ThreadSanitizer is intentionally a documented manual check because
+# runtime initialization is not reliable on every GitHub-hosted runner.
+# A TSAN runtime failure is never silently treated as a successful test.

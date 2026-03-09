@@ -622,3 +622,15 @@ keep the in-process library scope explicit.
   what negative sanitizer findings can and cannot establish.
 - The private Phase 25 study PDF stays **outside the Git repository**.
 - Next: automation/CI and cross-toolchain verification.
+
+## Phase 26 - GitHub Actions CI and cross-compiler verification (2027-01-09)
+
+- Added `.github/workflows/ci.yml` with push/PR/manual triggers, read-only
+  repository permissions, GCC and Clang matrix, full tests and separate
+  ASan+UBSan concurrency-audit job.
+- Added standard-library CI-contract tests, run from `make ci-config-test`
+  and the general `make test` target.
+- Documented Fedora commands, GitHub activation, performance/TSan limits,
+  and failure diagnosis in `docs/continuous_integration.md`.
+- Phase 26 personal PDF stays outside the repository.
+- Next: code-quality and reproducibility review.

@@ -546,3 +546,20 @@ by Git and integrated into the Makefile. Keep all generated cache directories,
 CSV results and private learning PDFs outside version control. See
 [docs/concurrency_safety_audit.md](docs/concurrency_safety_audit.md) for the
 contracts, expected results, sanitizer statuses and audit checklist.
+
+## Phase 26 - Continuous integration
+
+GitHub Actions builds and tests this project automatically on pushes, pull
+requests and manual runs with a GCC/Clang matrix, plus a separate ASan/UBSan
+concurrency-audit job. CI uses least-privilege `contents: read` permissions.
+
+```bash
+make ci-config-test       # stdlib checks for required workflow configuration
+make CC=gcc test          # full local suite
+make clean && make CC=clang test  # independent Clang suite
+make CC=gcc audit-asan    # focused memory/UB sanitizer audit
+```
+
+See `docs/continuous_integration.md` for Fedora setup, remote activation,
+limitations, and how to diagnose a failed job. Local checks are not proof
+that hosted Actions have run: inspect the repository Actions tab after push.

@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -498,3 +498,8 @@ audit-tsan: $(AUDIT_TSAN)
 # Exercise the wrapper even on hosts where TSAN runtime support is unavailable.
 audit-runner-test:
 	./tests/test_tsan_runner.sh
+
+# Phase 26: static checks for CI contract, using Python standard library only.
+.PHONY: ci-config-test
+ci-config-test:
+	python3 -m unittest discover -s tests -p 'test_ci_workflow.py' -v
