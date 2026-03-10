@@ -563,3 +563,23 @@ make CC=gcc audit-asan    # focused memory/UB sanitizer audit
 See `docs/continuous_integration.md` for Fedora setup, remote activation,
 limitations, and how to diagnose a failed job. Local checks are not proof
 that hosted Actions have run: inspect the repository Actions tab after push.
+
+## Phase 27 - Static analysis and failure-path code quality
+
+Phase 27 adds compiler-native static analysis alongside existing runtime
+and sanitizer testing. GCC analyzes every C translation unit; Clang analyzes
+production source and the latency benchmark where analysis discovered an
+allocation leak on initializer failure. Both initializer-failure branches
+now use centralized cleanup rather than returning with `all_samples` allocated.
+
+```bash
+make static-runner-test
+make static-check       # GCC -fanalyzer + Clang Static Analyzer
+make latency-test       # verify fixed benchmark still works
+make ci-config-test     # includes required static-analysis job
+make test
+```
+
+See `docs/static_analysis_review.md` for file coverage, Fedora setup,
+limitation notes and the engineering review checklist. Static analysis is
+not a substitute for sanitizer runs or concurrency correctness proofs.

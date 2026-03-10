@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test
+test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -429,6 +429,10 @@ help:
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
 	  'make test        Run all regression tests through Phase 25' \
+	  'make static-check Run GCC and Clang static analyzers (all C files)' \
+
+	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
+
 	  'make clean       Remove generated build artifacts'
 
 # Phase 23: request-level latency, separate from wall-clock throughput.
@@ -503,3 +507,13 @@ audit-runner-test:
 .PHONY: ci-config-test
 ci-config-test:
 	python3 -m unittest discover -s tests -p 'test_ci_workflow.py' -v
+
+# Phase 27: reproducible, fail-closed GCC/Clang static source analysis.
+.PHONY: static-check static-gcc static-clang static-runner-test
+static-gcc:
+	python3 tools/static_analysis.py --tool gcc
+static-clang:
+	python3 tools/static_analysis.py --tool clang
+static-check: static-gcc static-clang
+static-runner-test:
+	python3 -m unittest discover -s tests -p 'test_static_analysis.py' -v

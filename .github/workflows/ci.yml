@@ -37,6 +37,18 @@ jobs:
           CC: ${{ matrix.compiler }}
         run: make CC="$CC" test
 
+  static-analysis:
+    name: GCC and Clang static analysis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Verify runner failure semantics
+        run: make static-runner-test
+      - name: Analyze all C source translation units
+        run: make static-check
+
   sanitizers:
     name: Address and undefined behavior sanitizers
     runs-on: ubuntu-24.04

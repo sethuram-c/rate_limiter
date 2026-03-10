@@ -634,3 +634,15 @@ keep the in-process library scope explicit.
   and failure diagnosis in `docs/continuous_integration.md`.
 - Phase 26 personal PDF stays outside the repository.
 - Next: code-quality and reproducibility review.
+
+## Phase 27 - Static analysis and code quality audit (2027-01-10)
+
+- Added fail-closed GCC `-fanalyzer` coverage for all 55 C files and Clang
+  Static Analyzer coverage for production code and latency benchmark.
+- Corrected an actual leaked allocation in both benchmark initializer-failure
+  branches, reusing centralized cleanup.
+- Added `make static-gcc`, `static-clang`, `static-check`, and regression tests
+  for the analysis runner; integrated a third required GitHub Actions job.
+- Confirmed that sanitizer and runtime testing remain complementary.
+- Personal Phase 27 study PDF stays outside Git.
+- Next: API contracts and edge-case/failure-path regression coverage.

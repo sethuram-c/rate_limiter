@@ -42,9 +42,15 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotRegex(self.content, r'(?m)^\s*if:.*always\(\)')
         self.assertNotIn('|| true', self.content)
 
+    def test_static_analysis_is_required(self):
+        self.assertRegex(self.content, r'(?m)^  static-analysis:\s*$')
+        self.assertIn('make static-runner-test', self.content)
+        self.assertIn('make static-check', self.content)
+        self.assertNotIn('continue-on-error:', self.content)
+
     def test_bounded_runners_and_no_inline_secrets(self):
-        self.assertEqual(self.content.count('runs-on: ubuntu-24.04'), 2)
-        self.assertEqual(self.content.count('timeout-minutes:'), 2)
+        self.assertEqual(self.content.count('runs-on: ubuntu-24.04'), 3)
+        self.assertEqual(self.content.count('timeout-minutes:'), 3)
         self.assertNotIn('secrets.', self.content)
         self.assertRegex(self.content, r'actions/checkout@v[0-9]+')
 

@@ -140,11 +140,11 @@ int main(int argc, char **argv)
     if (mutex_mode) {
         if (!mutex_rate_limiter_init(&mutex, 64U, &policy, FIXED_TIME_MS)) {
             fputs("mutex initialization failed\n", stderr);
-            return 1;
+            goto failed;
         }
     } else if (!ip_rate_limiter_init(&lockfree, 64U, &policy, FIXED_TIME_MS)) {
         fputs("lock-free initialization failed (64-bit atomics required)\n", stderr);
-        return 1;
+        goto failed;
     }
     /* Identical prepopulation prevents first-insert work inside timing. */
     for (i = 0; i < (shared ? 1U : (size_t)requested_threads); ++i) {
