@@ -4,6 +4,7 @@
 #include "rate_service.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* Phase 16: an in-process HTTP-style adapter, NOT a socket/HTTP server.
@@ -38,5 +39,24 @@ bool request_gateway_handle(rate_service_t *service,
                             const char *client_ipv4,
                             uint32_t requested_tokens,
                             request_gateway_response_t *out);
+
+/* Phase 28: bounded, length-aware ingress for buffers that are NOT required
+ * to be NUL terminated. Accepts only 1..15 bytes representing a complete
+ * dotted-decimal IPv4 address. Embedded NUL bytes and trailing bytes are
+ * rejected, even if inet_pton() would parse a prefix. This entrypoint never
+ * reads beyond client_ipv4_len, and allocates no memory.
+ *
+ * On malformed/null input, returns true with a non-forwarded HTTP 400
+ * response; neither clock, token state, nor service counters are touched.
+ * On out == NULL, returns false and does not inspect the input or attempt a
+ * request. The input buffer must not be modified concurrently.
+ * Existing request_gateway_handle() remains compatible and requires a
+ * conventional NUL-terminated string.
+ */
+bool request_gateway_handle_n(rate_service_t *service,
+                              const char *client_ipv4,
+                              size_t client_ipv4_len,
+                              uint32_t requested_tokens,
+                              request_gateway_response_t *out);
 
 #endif

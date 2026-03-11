@@ -3,6 +3,27 @@
 A from-scratch systems-programming project evolving into a high-performance,
 thread-safe, per-IP token-bucket rate limiter written in C11.
 
+
+## Phase 28 - Length-bounded ingress and API contract tests
+
+Network-facing request buffers are often views rather than NUL-terminated
+strings. `request_gateway_handle_n(service, bytes, length, tokens, &response)`
+now parses an explicitly bounded 1..15-byte IPv4 view without reading past
+`length`, while the legacy `request_gateway_handle()` stays available.
+Malformed/embedded-NUL/oversized buffers are rejected before clock or limiter
+state changes. Fresh unit tests validate all outcomes, including 32,000
+concurrent requests across two IPs (74 allowed at fixed time).
+
+```bash
+make api-contract-test
+make api-contract-asan
+make ci-config-test
+make test
+```
+
+Read `docs/api_contract_hardening.md` for lifetime, failure-path and length
+preconditions. Keep the personal Phase 28 PDF out of Git.
+
 ## Project goals
 
 The finished project is intended to demonstrate:

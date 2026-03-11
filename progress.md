@@ -646,3 +646,17 @@ keep the in-process library scope explicit.
 - Confirmed that sanitizer and runtime testing remain complementary.
 - Personal Phase 27 study PDF stays outside Git.
 - Next: API contracts and edge-case/failure-path regression coverage.
+
+## Phase 28 - Bounded ingress API and failure-path contracts (2027-01-11)
+
+- Added a length-aware IPv4 gateway API that handles non-NUL-terminated input
+  and rejects malformed, oversized or embedded-NUL buffers without side effects.
+- Preserved the original string API for backwards compatibility, sharing the
+  same strict parser and decision-mapping code.
+- Added deterministic failure-path tests for 400/429/503 outcomes, stale
+  retry hints, clock failures, full-table handling and exact service counters.
+- Validated 32,000 concurrent bounded requests with exactly 74 admissions.
+- Extended `make test` and a focused ASan/UBSan target; retained the Phase 27
+  three-job CI workflow and its static-analysis requirements.
+- Personal detailed Phase 28 learning PDF remains outside Git.
+- Next: packaging, public headers and practical integration examples.

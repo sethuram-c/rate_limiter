@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -430,6 +430,7 @@ help:
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
 	  'make test        Run all regression tests through Phase 25' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
+	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
 
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
 
@@ -517,3 +518,18 @@ static-clang:
 static-check: static-gcc static-clang
 static-runner-test:
 	python3 -m unittest discover -s tests -p 'test_static_analysis.py' -v
+
+# Phase 28: length-bounded ingress contracts and failure-path regression.
+API_CONTRACT_TEST := $(BUILD_DIR)/test_api_contracts
+API_CONTRACT_SOURCES := tests/test_api_contracts.c $(REQUEST_GATEWAY_SOURCES)
+
+$(API_CONTRACT_TEST): $(API_CONTRACT_SOURCES) include/request_gateway.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(API_CONTRACT_SOURCES) $(LDFLAGS) $(LDLIBS) -pthread -o $@
+
+.PHONY: api-contract-test api-contract-asan
+api-contract-test: $(API_CONTRACT_TEST)
+	./$(API_CONTRACT_TEST)
+
+api-contract-asan:
+	$(CC) $(CPPFLAGS) -std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -pthread $(API_CONTRACT_SOURCES) $(LDFLAGS) -fsanitize=address,undefined $(LDLIBS) -pthread -o $(BUILD_DIR)/test_api_contracts_asan
+	ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ./$(BUILD_DIR)/test_api_contracts_asan
