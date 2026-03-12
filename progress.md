@@ -660,3 +660,18 @@ keep the in-process library scope explicit.
   three-job CI workflow and its static-analysis requirements.
 - Personal detailed Phase 28 learning PDF remains outside Git.
 - Next: packaging, public headers and practical integration examples.
+
+
+## Phase 29 - Static library packaging and installed-header integration (2027-01-12)
+
+- Added an explicit production-source manifest and `make library` to create
+  `build/libratelimiter.a` without demo/test/benchmark entry points.
+- Added umbrella header `include/ratelimiter.h`, preserving legacy includes;
+  staged all transitive public headers under `<prefix>/include/ratelimiter`.
+- Added `make install DESTDIR=... PREFIX=...` for safe non-root packaging.
+- Added an independent installed-header consumer and `make package-test`,
+  exercising admission, refill, per-IP isolation, quota denial, malformed
+  ingress and outcome counters without compiling source-tree `.c` files.
+- Continued carrying all prior tests in `make test`; personal PDF stays outside
+  the Git repository.
+- Next: packaging documentation, integration portability and release polish.

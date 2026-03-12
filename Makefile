@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -428,12 +428,13 @@ help:
 	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
-	  'make test        Run all regression tests through Phase 25' \
+	  'make test        Run all regression tests through Phase 29' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
 	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
-
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
-
+	  'make library     Build build/libratelimiter.a static archive' \
+	  'make package-test  Stage install and link a standalone C11 consumer' \
+	  'make install     Install library and headers (supports DESTDIR/PREFIX)' \
 	  'make clean       Remove generated build artifacts'
 
 # Phase 23: request-level latency, separate from wall-clock throughput.
@@ -533,3 +534,48 @@ api-contract-test: $(API_CONTRACT_TEST)
 api-contract-asan:
 	$(CC) $(CPPFLAGS) -std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -pthread $(API_CONTRACT_SOURCES) $(LDFLAGS) -fsanitize=address,undefined $(LDLIBS) -pthread -o $(BUILD_DIR)/test_api_contracts_asan
 	ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ./$(BUILD_DIR)/test_api_contracts_asan
+
+# Phase 29: source-only, C11 static library (no demos, benchmarks or tests).
+# The explicit list prevents `main` and experimental/baseline code entering
+# the installable rate-limiting library accidentally.
+AR ?= ar
+INSTALL ?= install
+PREFIX ?= /usr/local
+DESTDIR ?=
+STATIC_LIB := $(BUILD_DIR)/libratelimiter.a
+LIB_SOURCES := \
+  src/token_bucket.c \
+  src/monotonic_clock.c \
+  src/bucket_state.c \
+  src/lockfree_bucket.c \
+  src/ip_table_plan.c \
+  src/rate_allocator.c \
+  src/ip_atomic_table.c \
+  src/ip_rate_limiter.c \
+  src/rate_config.c \
+  src/rate_service.c \
+  src/request_gateway.c \
+  src/request_policy.c
+LIB_OBJECTS := $(patsubst src/%.c,$(BUILD_DIR)/lib/%.o,$(LIB_SOURCES))
+
+.PHONY: library install package-test
+library: $(STATIC_LIB)
+
+$(BUILD_DIR)/lib:
+	mkdir -p $@
+
+$(BUILD_DIR)/lib/%.o: src/%.c $(wildcard include/*.h) | $(BUILD_DIR)/lib
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread -c $< -o $@
+
+$(STATIC_LIB): $(LIB_OBJECTS)
+	$(AR) rcs $@ $^
+
+# Install all public/transitive headers so source consumers do not depend
+# on the original checkout. This phase is a C11 source API, not an ABI promise.
+install: $(STATIC_LIB)
+	$(INSTALL) -d "$(DESTDIR)$(PREFIX)/lib" "$(DESTDIR)$(PREFIX)/include/ratelimiter"
+	$(INSTALL) -m 644 $(STATIC_LIB) "$(DESTDIR)$(PREFIX)/lib/libratelimiter.a"
+	$(INSTALL) -m 644 include/*.h "$(DESTDIR)$(PREFIX)/include/ratelimiter/"
+
+package-test: $(STATIC_LIB)
+	CC="$(CC)" AR="$(AR)" ./tests/test_library_package.sh

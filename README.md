@@ -1,3 +1,21 @@
+## Phase 29 - Reusable static library and standalone integration
+
+The project can now be built as `build/libratelimiter.a`, installed under a
+staging prefix, and linked into an **independent C11 consumer** using only
+installed headers. The recommended external include is
+`#include <ratelimiter/ratelimiter.h>`.
+
+```bash
+make library
+make package-test
+make install DESTDIR="$PWD/build/stage" PREFIX=/usr
+```
+
+This does not imply shared-library/ABI stability or a network service.
+See `docs/library_packaging.md` for link order, POSIX flags, thread-lifetime
+contracts and scope of the packaged implementation. The separate Phase 29
+study PDF is intentionally not tracked in Git.
+
 # Lock-Free Per-IP Rate Limiter
 
 A from-scratch systems-programming project evolving into a high-performance,
