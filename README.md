@@ -622,3 +622,23 @@ make test
 See `docs/static_analysis_review.md` for file coverage, Fedora setup,
 limitation notes and the engineering review checklist. Static analysis is
 not a substitute for sanitizer runs or concurrency correctness proofs.
+
+## Phase 30 - Source versioning and release-readiness preflight
+
+Development milestone **0.1.0** is recorded in `VERSION`,
+`include/rate_version.h` and `CHANGELOG.md`. The installed static archive
+exposes `rl_version_string()` so consumers can check compiled headers against
+the linked implementation. This milestone is **unreleased** and pre-1.0:
+public struct layouts are visible and there is **no stable ABI promise**.
+
+```sh
+make version-test
+make release-contract-test
+make release-check    # staged install, CI contract, static-analysis preflight
+make test             # full regression including version tests
+```
+
+A real release requires a license/distribution decision, successful hosted CI,
+a deliberate Git tag and explicit publication. None occurs automatically.
+See [docs/release_readiness.md](docs/release_readiness.md) for the detailed
+checklist. Keep the Phase 30 personal learning PDF outside the repository.

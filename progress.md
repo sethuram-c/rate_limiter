@@ -675,3 +675,18 @@ keep the in-process library scope explicit.
 - Continued carrying all prior tests in `make test`; personal PDF stays outside
   the Git repository.
 - Next: packaging documentation, integration portability and release polish.
+
+## Phase 30 - Version metadata and release preflight (2027-01-13)
+
+- Added `VERSION` and public `rate_version.h` (0.1.0 development milestone),
+  plus compiled `rl_version_string()` identity in `libratelimiter.a`.
+- Added an Unreleased changelog describing core capabilities and explicit
+  pre-1.0 ABI, lifetime, capacity and deployment limitations.
+- Added fail-closed source consistency tests for version/header/changelog,
+  including negative mutation tests, and compile/runtime version tests.
+- Extended the staged installed-header consumer to validate archive/header
+  identity and installed version/changelog documentation.
+- Added a `make release-check` preflight; **no Git tag, license, actual
+  publication, or hosted CI success** is claimed by this phase.
+- Personal learning PDF stays outside Git.
+- Next: public API/reference documentation and usage examples.

@@ -12,7 +12,9 @@
  * Initialize before workers start; join workers before destroying the service.
  * The clock callback must itself be thread-safe for concurrent requests.
  * The interface uses public C struct layouts, so ABI is not yet stable.
+ * See rate_version.h for experimental source-release version metadata.
  */
+#include "rate_version.h"
 #include "rate_service.h"
 #include "request_gateway.h"
 #include "request_policy.h"

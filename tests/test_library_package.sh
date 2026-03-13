@@ -17,13 +17,18 @@ make --no-print-directory -C "$repo" install \
 
 header="$stage/root/usr/include/ratelimiter/ratelimiter.h"
 archive="$stage/root/usr/lib/libratelimiter.a"
-[[ -f "$header" && -s "$archive" ]] || {
+version="$stage/root/usr/share/doc/ratelimiter/VERSION"
+changelog="$stage/root/usr/share/doc/ratelimiter/CHANGELOG.md"
+[[ -f "$header" && -s "$archive" && -f "$version" && -s "$changelog" ]] || {
   echo 'packaging test: missing header or library' >&2
   exit 1
 }
 # Detect accidental archive emptiness without assuming exact object counts.
 "$archiver" t "$archive" | grep -q 'rate_service.o'
 "$archiver" t "$archive" | grep -q 'request_gateway.o'
+"$archiver" t "$archive" | grep -q 'rate_version.o'
+[[ "$(cat "$version")" == "$(cat "$repo/VERSION")" ]]
+[[ -f "$stage/root/usr/include/ratelimiter/rate_version.h" ]]
 
 # Compile outside the repository directory. No -Iinclude or source .c files.
 (

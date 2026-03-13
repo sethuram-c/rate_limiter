@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Only this single-threaded example mutates the clock without atomics.
  * Applications with worker threads must provide thread-safe callbacks. */
@@ -42,6 +43,11 @@ int main(void)
     rate_service_stats_t stats;
     bool passed = true;
 
+    /* Installed header and linked archive must report matching versions. */
+    if (strcmp(rl_version_string(), RL_VERSION_STRING) != 0) {
+        fputs("installed header/archive version mismatch\n", stderr);
+        return 1;
+    }
     if (!rate_service_init(&service, 8U, &policy, fixture_now, &clock)) {
         fputs("failed to initialize rate-service consumer\n", stderr);
         return 1;
@@ -66,6 +72,7 @@ int main(void)
         fputs("external consumer integration FAILED\n", stderr);
         return 1;
     }
-    puts("external consumer integration passed: 4 allowed, 1 denied, 1 ingress rejection");
+    printf("external consumer integration passed: version=%s, 4 allowed, "
+           "1 denied, 1 ingress rejection\n", rl_version_string());
     return 0;
 }

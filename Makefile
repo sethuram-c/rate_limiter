@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -544,6 +544,7 @@ PREFIX ?= /usr/local
 DESTDIR ?=
 STATIC_LIB := $(BUILD_DIR)/libratelimiter.a
 LIB_SOURCES := \
+  src/rate_version.c \
   src/token_bucket.c \
   src/monotonic_clock.c \
   src/bucket_state.c \
@@ -573,9 +574,27 @@ $(STATIC_LIB): $(LIB_OBJECTS)
 # Install all public/transitive headers so source consumers do not depend
 # on the original checkout. This phase is a C11 source API, not an ABI promise.
 install: $(STATIC_LIB)
-	$(INSTALL) -d "$(DESTDIR)$(PREFIX)/lib" "$(DESTDIR)$(PREFIX)/include/ratelimiter"
+	$(INSTALL) -d "$(DESTDIR)$(PREFIX)/lib" "$(DESTDIR)$(PREFIX)/include/ratelimiter" "$(DESTDIR)$(PREFIX)/share/doc/ratelimiter"
 	$(INSTALL) -m 644 $(STATIC_LIB) "$(DESTDIR)$(PREFIX)/lib/libratelimiter.a"
 	$(INSTALL) -m 644 include/*.h "$(DESTDIR)$(PREFIX)/include/ratelimiter/"
+	$(INSTALL) -m 644 VERSION CHANGELOG.md "$(DESTDIR)$(PREFIX)/share/doc/ratelimiter/"
 
 package-test: $(STATIC_LIB)
 	CC="$(CC)" AR="$(AR)" ./tests/test_library_package.sh
+
+# Phase 30: version API and release preflight. No tag/release is created.
+VERSION_TEST := $(BUILD_DIR)/test_rate_version
+
+$(VERSION_TEST): tests/test_rate_version.c src/rate_version.c include/rate_version.h include/ratelimiter.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_rate_version.c src/rate_version.c $(LDFLAGS) $(LDLIBS) -o $@
+
+.PHONY: version-test release-contract-test release-check
+version-test: $(VERSION_TEST)
+	./$(VERSION_TEST)
+
+release-contract-test:
+	python3 -m unittest discover -s tests -p 'test_release_contract.py' -v
+	python3 tools/release_contract.py
+
+release-check: release-contract-test version-test package-test ci-config-test static-check
+	@echo 'Phase 30 release preflight passed (0.1.0 Unreleased; not published)'
