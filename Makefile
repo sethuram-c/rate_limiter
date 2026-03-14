@@ -369,7 +369,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -428,12 +428,13 @@ help:
 	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
-	  'make test        Run all regression tests through Phase 29' \
+	  'make test        Run all regression tests through Phase 31' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
 	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
 	  'make library     Build build/libratelimiter.a static archive' \
 	  'make package-test  Stage install and link a standalone C11 consumer' \
+  'make docs-test    Verify public API docs and staged example' \
 	  'make install     Install library and headers (supports DESTDIR/PREFIX)' \
 	  'make clean       Remove generated build artifacts'
 
@@ -598,3 +599,13 @@ release-contract-test:
 
 release-check: release-contract-test version-test package-test ci-config-test static-check
 	@echo 'Phase 30 release preflight passed (0.1.0 Unreleased; not published)'
+
+# Phase 31: installed consumer example and fail-closed documentation checks.
+.PHONY: docs-test docs-example docs-contract-test
+docs-contract-test:
+	python3 -m unittest discover -s tests -p 'test_public_api_docs.py' -v
+
+docs-example: $(STATIC_LIB)
+	CC="$(CC)" AR="$(AR)" ./tests/test_public_api_docs.sh
+
+docs-test: docs-contract-test docs-example

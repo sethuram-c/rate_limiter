@@ -690,3 +690,16 @@ keep the in-process library scope explicit.
   publication, or hosted CI success** is claimed by this phase.
 - Personal learning PDF stays outside Git.
 - Next: public API/reference documentation and usage examples.
+
+## Phase 31 - Public API reference and developer integration (2027-01-14)
+
+- Wrote a source-grounded public API reference covering version, configuration,
+  lifecycle, rate-service results, diagnostics, counters, gateways and CIDR rules.
+- Added a hands-on installed-library integration guide with Fedora/Linux
+  build, installation staging, linker flags, debugger commands and pitfalls.
+- Added `examples/public_api_walkthrough.c` using bounded input and an injected
+  clock; validates 200/400/403/429 paths, refill and exact service accounting.
+- Added `make docs-test` and integrated it in `make test`; this exercises both
+  documentation contracts and an external build against installed headers.
+- No production admission algorithm was changed; Phase 31 personal PDF stays
+  outside the repository. Next: maintainability and audit refinements.

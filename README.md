@@ -1,3 +1,15 @@
+# Lock-Free Per-IP Rate Limiter
+
+A from-scratch C11 systems project implementing an in-process, per-IP token-bucket rate limiter.
+
+## Public API reference (Phase 31)
+
+- [Public API reference](docs/public_api_reference.md) explains the entry points, enum outcomes, ownership, threading, clock, CIDR policy, and diagnostic/counter contracts.
+- [Developer integration guide](docs/developer_integration_guide.md) provides an external installed-header compilation path and Fedora/Linux troubleshooting.
+- `examples/public_api_walkthrough.c` is a reproducible staged-library consumer exercising version, budget, bounded IPv4 parsing, 200/400/403/429 policy paths, refill and clean teardown.
+- `make docs-test` verifies the documented symbols and links, stages and links the consumer against **installed** headers and the static library, and checks expected output. It is also included in `make test`.
+- The project remains an **in-process C11 library**, version `0.1.0` Unreleased; no HTTP listener or stable ABI is promised. Personal study PDFs are stored outside this repository.
+
 ## Phase 29 - Reusable static library and standalone integration
 
 The project can now be built as `build/libratelimiter.a`, installed under a
@@ -15,12 +27,6 @@ This does not imply shared-library/ABI stability or a network service.
 See `docs/library_packaging.md` for link order, POSIX flags, thread-lifetime
 contracts and scope of the packaged implementation. The separate Phase 29
 study PDF is intentionally not tracked in Git.
-
-# Lock-Free Per-IP Rate Limiter
-
-A from-scratch systems-programming project evolving into a high-performance,
-thread-safe, per-IP token-bucket rate limiter written in C11.
-
 
 ## Phase 28 - Length-bounded ingress and API contract tests
 
