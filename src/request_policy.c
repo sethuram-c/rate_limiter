@@ -1,6 +1,7 @@
 #include "request_policy.h"
 
-#include <arpa/inet.h>
+#include "ipv4_parse_internal.h"
+
 #include <string.h>
 
 static uint32_t prefix_mask(uint8_t prefix)
@@ -15,8 +16,7 @@ static uint32_t prefix_mask(uint8_t prefix)
 static bool parse_cidr(const char *cidr, request_policy_rule_t *out)
 {
     const char *slash;
-    char address[16];
-    struct in_addr parsed;
+    uint32_t ip;
     size_t address_len;
     const char *p;
     unsigned int prefix = 0U;
@@ -29,12 +29,7 @@ static bool parse_cidr(const char *cidr, request_policy_rule_t *out)
         return false;
     }
     address_len = (size_t)(slash - cidr);
-    if (address_len == 0U || address_len >= sizeof(address)) {
-        return false;
-    }
-    memcpy(address, cidr, address_len);
-    address[address_len] = '\0';
-    if (inet_pton(AF_INET, address, &parsed) != 1 || slash[1] == '\0') {
+    if (!rl_ipv4_parse_span(cidr, address_len, &ip) || slash[1] == '\0') {
         return false;
     }
     for (p = slash + 1; *p != '\0'; ++p) {
@@ -48,7 +43,7 @@ static bool parse_cidr(const char *cidr, request_policy_rule_t *out)
     }
     out->prefix = (uint8_t)prefix;
     out->mask = prefix_mask(out->prefix);
-    out->network = ntohl(parsed.s_addr) & out->mask;
+    out->network = ip & out->mask;
     return true;
 }
 
@@ -75,7 +70,7 @@ bool request_policy_handle(const request_policy_t *policy,
 {
     request_policy_response_t response = {0};
     request_gateway_response_t gateway;
-    struct in_addr parsed;
+    uint32_t ip;
     bool found = false;
     request_policy_rule_t best = {0};
     size_t i;
@@ -86,9 +81,8 @@ bool request_policy_handle(const request_policy_t *policy,
     }
 
     /* Invalid address/cost must not use exemptions to bypass validation. */
-    if (requested_tokens > 0U && client_ipv4 != NULL &&
-        inet_pton(AF_INET, client_ipv4, &parsed) == 1) {
-        uint32_t ip = ntohl(parsed.s_addr);
+    if (requested_tokens > 0U &&
+        rl_ipv4_parse_cstr(client_ipv4, &ip)) {
         for (i = 0U; i < policy->count; ++i) {
             const request_policy_rule_t *rule = &policy->rules[i];
             if ((ip & rule->mask) != rule->network) {

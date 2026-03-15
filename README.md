@@ -1,5 +1,15 @@
 # Lock-Free Per-IP Rate Limiter
 
+## Phase 32 - Architecture review and deduplicated IPv4 parsing
+
+Gateway, CIDR parser and policy matcher now share a private, bounded IPv4
+normalization helper in `src/ipv4_parse_internal.h`. Public headers, the
+static-library API, and the lock-free admission algorithm are unchanged.
+`make ipv4-internal-test` covers the shared parser; full ingress, policy and
+installed-consumer tests guard the existing contracts. See
+[maintainability review](docs/architecture_maintainability.md).
+The separate Phase 32 learning PDF is not part of this Git repository.
+
 A from-scratch C11 systems project implementing an in-process, per-IP token-bucket rate limiter.
 
 ## Public API reference (Phase 31)
@@ -59,9 +69,9 @@ The finished project is intended to demonstrate:
 - packed multi-field state-transition design (Phase 6)
 - lock-free single-token-bucket CAS request processing (Phase 7)
 - fixed-capacity concurrent IPv4 hashing (Phase 10)
-- correctness testing and performance analysis (future phases)
+- correctness testing and performance analysis (Phases 18-23)
 
-## Current status - Phase 16
+## Historical milestone - Phase 16
 
 Earlier Phase 13 added **explicit configuration planning, capacity bounds and a
 resource-budgeted initializer** on top of the Phase 12 clock-aware API.

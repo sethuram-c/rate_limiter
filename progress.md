@@ -703,3 +703,16 @@ keep the in-process library scope explicit.
   documentation contracts and an external build against installed headers.
 - No production admission algorithm was changed; Phase 31 personal PDF stays
   outside the repository. Next: maintainability and audit refinements.
+
+## Phase 32 - Architecture maintainability review (2027-01-15)
+
+- Centralized duplicated IPv4 validation and host-order normalization in
+  private, header-only `src/ipv4_parse_internal.h`.
+- Updated gateway and CIDR-policy implementations without changing external
+  request contracts, lock-free token operations, or installed headers.
+- Added direct tests for bounded/non-NUL views, malformed input, NULL arguments,
+  correct endian conversion and failure output preservation.
+- Documented the dependency layers, memory-lifetime assumptions and review
+  checklist in `docs/architecture_maintainability.md`.
+- Added `make ipv4-internal-test`, included in `make test`; personal PDF stays
+  outside Git. Next: final reliability and release-quality refinements.

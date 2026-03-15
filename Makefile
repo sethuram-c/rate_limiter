@@ -36,6 +36,7 @@ RATE_STATUS_DEMO := $(BUILD_DIR)/rate_status_demo
 REQUEST_GATEWAY_TEST := $(BUILD_DIR)/test_request_gateway
 REQUEST_GATEWAY_DEMO := $(BUILD_DIR)/request_gateway_demo
 REQUEST_POLICY_TEST := $(BUILD_DIR)/test_request_policy
+IPV4_INTERNAL_TEST := $(BUILD_DIR)/test_ipv4_internal
 WORKLOAD_BENCH := $(BUILD_DIR)/workload_bench
 WORKLOAD_BENCH_SOURCES = bench/workload_bench.c $(RATE_SERVICE_SOURCES)
 REQUEST_POLICY_DEMO := $(BUILD_DIR)/request_policy_demo
@@ -369,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -428,13 +429,14 @@ help:
 	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
-	  'make test        Run all regression tests through Phase 31' \
+	  'make test        Run all regression tests through Phase 32' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
 	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
 	  'make library     Build build/libratelimiter.a static archive' \
 	  'make package-test  Stage install and link a standalone C11 consumer' \
   'make docs-test    Verify public API docs and staged example' \
+	  'make ipv4-internal-test Check shared private IPv4 normalization' \
 	  'make install     Install library and headers (supports DESTDIR/PREFIX)' \
 	  'make clean       Remove generated build artifacts'
 
@@ -566,7 +568,7 @@ library: $(STATIC_LIB)
 $(BUILD_DIR)/lib:
 	mkdir -p $@
 
-$(BUILD_DIR)/lib/%.o: src/%.c $(wildcard include/*.h) | $(BUILD_DIR)/lib
+$(BUILD_DIR)/lib/%.o: src/%.c $(wildcard include/*.h) src/ipv4_parse_internal.h | $(BUILD_DIR)/lib
 	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread -c $< -o $@
 
 $(STATIC_LIB): $(LIB_OBJECTS)
@@ -609,3 +611,11 @@ docs-example: $(STATIC_LIB)
 	CC="$(CC)" AR="$(AR)" ./tests/test_public_api_docs.sh
 
 docs-test: docs-contract-test docs-example
+
+# Phase 32: regression tests for a shared private IPv4 normalization helper.
+$(IPV4_INTERNAL_TEST): tests/test_ipv4_internal.c src/ipv4_parse_internal.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_ipv4_internal.c $(LDFLAGS) $(LDLIBS) -o $@
+
+.PHONY: ipv4-internal-test
+ipv4-internal-test: $(IPV4_INTERNAL_TEST)
+	./$(IPV4_INTERNAL_TEST)
