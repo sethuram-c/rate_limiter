@@ -85,8 +85,33 @@ bool ip_rate_limiter_check_report(ip_rate_limiter_t *limiter,
     report.decision = IP_RATE_INVALID;
     /* Validate BEFORE claiming an IP slot (a failed request has no effect). */
     if (!ready(limiter) || amount == 0U ||
-        now_ms > BUCKET_STATE_MAX_TIME_MS ||
-        !ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
+        now_ms > BUCKET_STATE_MAX_TIME_MS) {
+        *out = report;
+        return true;
+    }
+
+    /* A request larger than this bucket's maximum capacity can never be
+     * admitted. Unseen keys must not occupy the finite IP index merely
+     * because an impossible request arrived (capacity-exhaustion defense).
+     * Existing keys retain the normal CAS/refill/reporting semantics.
+     * A concurrent first insertion after an absent lookup is harmless: this
+     * oversized request is still correctly denied at its lookup point.
+     */
+    if (amount > (uint32_t)limiter->buckets[0].policy.capacity) {
+        bool found;
+        size_t index;
+        if (!ip_atomic_table_find(&limiter->index, ip, &found, &index)) {
+            *out = report;
+            return true;
+        }
+        if (!found) {
+            report.decision = IP_RATE_DENIED;
+            *out = report;
+            return true;
+        }
+        slot.kind = IP_ATOMIC_EXISTS;
+        slot.index = index;
+    } else if (!ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
         *out = report;
         return true;
     }

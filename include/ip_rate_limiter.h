@@ -54,13 +54,17 @@ bool ip_rate_limiter_init_with_allocator(ip_rate_limiter_t *limiter,
 /* Quiescent-only destruction: caller must stop/join all users first. */
 void ip_rate_limiter_destroy(ip_rate_limiter_t *limiter);
 
-/* No mutation for invalid inputs; FULL does not consume another IP's tokens. */
+/* No mutation for invalid inputs; FULL does not consume another IP's tokens.
+ * Oversized requests from unseen keys return DENIED without claiming a slot.
+ * Existing keys still execute the usual CAS transition for diagnostics. */
 ip_rate_decision_t ip_rate_limiter_check(ip_rate_limiter_t *limiter,
                                          uint32_t ip, uint32_t amount,
                                          uint64_t now_ms);
 
 /* Phase 14: observation captured by the request's own CAS.
- * valid_state is true ONLY for ALLOWED/DENIED, never for FULL/INVALID.
+ * valid_state can be true ONLY for ALLOWED/DENIED, never for FULL/INVALID.
+ * An oversized request for an unseen key returns DENIED without a bucket
+ * state, because it never inserts that key into the finite index.
  * Fields are copied before returning; they describe the successful CAS
  * and can immediately be superseded by other concurrent operations. */
 typedef struct {

@@ -73,8 +73,23 @@ ip_rate_decision_t mutex_rate_limiter_check(mutex_rate_limiter_t *limiter,
     ip_rate_decision_t result;
 
     if (!ready(limiter) || amount == 0U ||
-        now_ms > BUCKET_STATE_MAX_TIME_MS ||
-        !ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
+        now_ms > BUCKET_STATE_MAX_TIME_MS) {
+        return IP_RATE_INVALID;
+    }
+    /* Match the CAS implementation: impossible requests from unseen IPs
+     * never occupy an index slot. Existing buckets still refill normally. */
+    if (amount > (uint32_t)limiter->policy.capacity) {
+        bool found;
+        size_t index;
+        if (!ip_atomic_table_find(&limiter->index, ip, &found, &index)) {
+            return IP_RATE_INVALID;
+        }
+        if (!found) {
+            return IP_RATE_DENIED;
+        }
+        slot.kind = IP_ATOMIC_EXISTS;
+        slot.index = index;
+    } else if (!ip_atomic_table_get_or_insert(&limiter->index, ip, &slot)) {
         return IP_RATE_INVALID;
     }
     if (slot.kind == IP_ATOMIC_FULL) {

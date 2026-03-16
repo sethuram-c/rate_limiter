@@ -1,5 +1,23 @@
 # Lock-Free Per-IP Rate Limiter
 
+## Phase 33 - Reliability hardening for impossible token requests
+
+Requests that demand more tokens than a bucket can ever hold are now denied
+without inserting an **unseen** IP into the fixed-capacity index. This avoids
+spending IP slots on never-admissible traffic. Existing IPs still use the same
+CAS/refill path, and the mutex reference matches the behavior for fair
+comparisons. Such denials have no bucket-state/retry hint until the IP has
+actually been registered. See [edge-case audit](docs/reliability_edge_cases.md).
+
+```bash
+make impossible-request-test
+make mutex-test
+make test
+```
+
+The personal Phase 33 learning PDF remains outside the repository.
+
+
 ## Phase 32 - Architecture review and deduplicated IPv4 parsing
 
 Gateway, CIDR parser and policy matcher now share a private, bounded IPv4

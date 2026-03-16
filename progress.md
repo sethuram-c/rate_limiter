@@ -716,3 +716,17 @@ keep the in-process library scope explicit.
   checklist in `docs/architecture_maintainability.md`.
 - Added `make ipv4-internal-test`, included in `make test`; personal PDF stays
   outside Git. Next: final reliability and release-quality refinements.
+
+## Phase 33 - Oversized-request reliability audit (2027-01-16)
+
+- Identified an index-exhaustion weakness: impossibly large token requests
+  could register unique IPs despite being permanently inadmissible.
+- Hardened per-IP CAS and mutex implementations: unknown oversized keys
+  return DENIED without slot publication; known IPs retain refill and
+  decision-aligned state-reporting semantics.
+- Added deterministic, table-full, gateway/service diagnostic and 40,000-call
+  concurrent regression tests in `tests/test_impossible_requests.c`.
+- Integrated `make impossible-request-test` into `make test` and documented
+  state/no-retry, counter and concurrency behavior.
+- No eviction or capacity expansion added; the learning PDF remains outside
+  the repository. Next: systematic test/coverage and release-readiness review.

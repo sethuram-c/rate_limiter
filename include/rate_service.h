@@ -122,6 +122,8 @@ void rate_service_destroy(rate_service_t *service);
  * for decisions ALLOWED/DENIED. Other fields are zeroed on failures.
  * retry_possible is meaningful only for DENIED; request > capacity or a
  * required refill beyond the timestamp limit cannot have a retry hint.
+ * An oversized request from an unseen IP is DENIED without slot insertion;
+ * has_bucket_state remains false and no retry hint is possible.
  * retry_after_ms is a lower bound based on the sampled monotonic clock. */
 typedef struct {
     rate_service_result_t result;

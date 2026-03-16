@@ -370,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -429,14 +429,15 @@ help:
 	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
-	  'make test        Run all regression tests through Phase 32' \
+	  'make test        Run all regression tests through Phase 33' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
 	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
 	  'make library     Build build/libratelimiter.a static archive' \
 	  'make package-test  Stage install and link a standalone C11 consumer' \
-  'make docs-test    Verify public API docs and staged example' \
+	  'make docs-test    Verify public API docs and staged example' \
 	  'make ipv4-internal-test Check shared private IPv4 normalization' \
+	  'make impossible-request-test Prevent oversize requests from claiming IP slots' \
 	  'make install     Install library and headers (supports DESTDIR/PREFIX)' \
 	  'make clean       Remove generated build artifacts'
 
@@ -619,3 +620,14 @@ $(IPV4_INTERNAL_TEST): tests/test_ipv4_internal.c src/ipv4_parse_internal.h | $(
 .PHONY: ipv4-internal-test
 ipv4-internal-test: $(IPV4_INTERNAL_TEST)
 	./$(IPV4_INTERNAL_TEST)
+
+# Phase 33: defense against impossibly large requests exhausting IP slots.
+IMPOSSIBLE_TEST := $(BUILD_DIR)/test_impossible_requests
+IMPOSSIBLE_TEST_SOURCES := tests/test_impossible_requests.c src/request_gateway.c $(RATE_SERVICE_SOURCES)
+
+$(IMPOSSIBLE_TEST): $(IMPOSSIBLE_TEST_SOURCES) include/ip_rate_limiter.h include/rate_service.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -pthread $(IMPOSSIBLE_TEST_SOURCES) $(LDFLAGS) -pthread $(LDLIBS) -o $@
+
+.PHONY: impossible-request-test
+impossible-request-test: $(IMPOSSIBLE_TEST)
+	./$(IMPOSSIBLE_TEST)
