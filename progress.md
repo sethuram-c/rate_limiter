@@ -730,3 +730,16 @@ keep the in-process library scope explicit.
   state/no-retry, counter and concurrency behavior.
 - No eviction or capacity expansion added; the learning PDF remains outside
   the repository. Next: systematic test/coverage and release-readiness review.
+
+## Phase 34 - Systematic regression coverage and release quality gates (2027-01-17)
+
+- Added a fail-closed quick/full verification runner in `tools/quality_gate.py`.
+- Added twelve orchestration tests covering step ordering, missing tools, nonzero
+  exit codes, launch failures, compiler selection and benchmark exclusion.
+- Added `make quality-quick`, `make quality-release`, `make quality-gate-test`
+  and a GNU gcov coverage probe focused on the sequential token-bucket module.
+- Preserved the existing CI jobs, immutable release version 0.1.0 and
+  established test targets, rather than reworking production concurrency code.
+- Documented what passing tests and scoped coverage can and cannot establish.
+- Personal Phase 34 PDF remains outside Git. Next: reproducible benchmark
+  evidence, final release preparation and portfolio presentation.

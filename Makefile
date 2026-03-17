@@ -370,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -429,7 +429,7 @@ help:
 	  'make audit-runner-test Verify TSAN PASS/SKIP/FAIL classification' \
 	  'make audit-asan      Run AddressSanitizer + UndefinedBehaviorSanitizer' \
 	  'make audit-tsan      Try ThreadSanitizer (77 means unsupported runtime)' \
-	  'make test        Run all regression tests through Phase 33' \
+	  'make test        Run all regression tests through Phase 34' \
 	  'make static-check Run GCC and Clang static analyzers (all C files)' \
 	  'make api-contract-test Validate bounded input, failure paths and concurrency' \
 	  'make static-runner-test Verify analyzer runner fail-closed behavior' \
@@ -439,6 +439,10 @@ help:
 	  'make ipv4-internal-test Check shared private IPv4 normalization' \
 	  'make impossible-request-test Prevent oversize requests from claiming IP slots' \
 	  'make install     Install library and headers (supports DESTDIR/PREFIX)' \
+	  'make quality-gate-test  Test fail-closed quality-gate orchestration' \
+	  'make quality-quick  Run focused verification with GCC' \
+	  'make quality-release  Run full tests, analyzers, sanitizers' \
+	  'make coverage-smoke  Check deterministic C line coverage with gcov' \
 	  'make clean       Remove generated build artifacts'
 
 # Phase 23: request-level latency, separate from wall-clock throughput.
@@ -631,3 +635,27 @@ $(IMPOSSIBLE_TEST): $(IMPOSSIBLE_TEST_SOURCES) include/ip_rate_limiter.h include
 .PHONY: impossible-request-test
 impossible-request-test: $(IMPOSSIBLE_TEST)
 	./$(IMPOSSIBLE_TEST)
+
+# Phase 34: repeatable, fail-closed release quality gates.
+.PHONY: quality-gate-test quality-quick quality-release coverage-smoke
+quality-gate-test:
+	python3 -m unittest discover -s tests -p 'test_quality_gate.py' -v
+
+quality-quick:
+	python3 tools/quality_gate.py --profile quick --compiler gcc
+
+quality-release:
+	python3 tools/quality_gate.py --profile release --compiler gcc
+
+# Coverage is a diagnostic, not a hard-coded success percentage. Instrument
+# one deterministic model and retain all generated .gcov files in build/.
+coverage-smoke: | $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/coverage
+	gcc $(CPPFLAGS) -std=c11 -Wall -Wextra -Wpedantic -Werror -O0 -g --coverage \
+	  tests/test_token_bucket.c src/token_bucket.c -o $(BUILD_DIR)/coverage/test_token_bucket
+	./$(BUILD_DIR)/coverage/test_token_bucket
+	gcov -b -o $(BUILD_DIR)/coverage $(BUILD_DIR)/coverage/test_token_bucket-token_bucket.gcno > $(BUILD_DIR)/coverage/gcov_summary.txt
+	mv token_bucket.c.gcov $(BUILD_DIR)/coverage/token_bucket.c.gcov
+	grep -q '^Lines executed:' $(BUILD_DIR)/coverage/gcov_summary.txt
+	@echo 'Coverage summary (instrumented token-bucket implementation):'
+	@grep '^Lines executed:' $(BUILD_DIR)/coverage/gcov_summary.txt | head -1

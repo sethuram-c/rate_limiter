@@ -1,5 +1,24 @@
 # Lock-Free Per-IP Rate Limiter
 
+## Phase 34 - Repeatable release quality gates
+
+The project now offers fail-closed, reproducible verification commands:
+
+```bash
+make quality-gate-test     # test the verification runner itself
+make quality-quick         # clean build + focused invariants and contracts
+make coverage-smoke        # GCC gcov, sequential token-bucket module only
+make quality-release       # full suite + static analysis + ASan/UBSan audit
+```
+
+`tools/quality_gate.py` also accepts `--compiler clang` for a clean Clang
+quick/full verification. The coverage percentage applies to **one selected
+module**, not to the whole project. See
+[release-quality-gate documentation](docs/release_quality_gates.md). Version
+0.1.0 remains Unreleased; no Git tag is created. The learning PDF is stored
+outside the repository.
+
+
 ## Phase 33 - Reliability hardening for impossible token requests
 
 Requests that demand more tokens than a bucket can ever hold are now denied
