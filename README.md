@@ -695,3 +695,22 @@ A real release requires a license/distribution decision, successful hosted CI,
 a deliberate Git tag and explicit publication. None occurs automatically.
 See [docs/release_readiness.md](docs/release_readiness.md) for the detailed
 checklist. Keep the Phase 30 personal learning PDF outside the repository.
+
+## Phase 35 - Reproducible local performance evidence
+
+Generate **locally measured** mutex vs lock-free benchmark evidence without
+checking variable machine-specific results into the source repository:
+
+```sh
+make evidence-test
+make evidence-smoke     # fast, small 1/2-thread example
+make evidence-report    # extended 1/2/4/8-thread paired run
+cat build/evidence_report.md
+```
+
+The generated `build/evidence_raw.csv`, `evidence_summary.csv`,
+`evidence_environment.json`, and `evidence_report.md` are ignored by Git.
+The evidence report records a local benchmark binary hash, source Git SHA when
+available, paired-ratio statistics and methodological limitations. Neither
+this report nor the timed benchmark establishes universal speedup or real
+network-service request throughput. See [the reproducibility method](docs/performance_evidence.md).

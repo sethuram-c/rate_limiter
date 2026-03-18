@@ -370,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: evidence-test quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -416,6 +416,9 @@ help:
 	  'make mutex-compare-test   Test fair benchmark and parser' \
 	  'make mutex-compare-sample  Show one shared 4-thread A/B run' \
 	  'make mutex-compare-report  Run repeated paired A/B measurements' \
+	  'make evidence-test         Validate local evidence report generator' \
+	  'make evidence-smoke        Create small local benchmark evidence bundle' \
+	  'make evidence-report       Generate repeated paired performance evidence' \
 	  'make traffic-profile-test    Validate deterministic weighted traffic and A/B reports' \
 	  'make traffic-profile-sample  Show one skewed mixed-cost A/B example' \
 	  'make traffic-profile-report  Repeated hot/uniform/skewed matrix in CSV' \
@@ -659,3 +662,20 @@ coverage-smoke: | $(BUILD_DIR)
 	grep -q '^Lines executed:' $(BUILD_DIR)/coverage/gcov_summary.txt
 	@echo 'Coverage summary (instrumented token-bucket implementation):'
 	@grep '^Lines executed:' $(BUILD_DIR)/coverage/gcov_summary.txt | head -1
+
+# Phase 35: repeatable benchmark evidence. Raw results and machine metadata
+# live under ignored build/ rather than becoming universal claims in Git.
+.PHONY: evidence-test evidence-smoke evidence-report
+
+evidence-test: $(MUTEX_COMPARE)
+	python3 -m unittest discover -s tests -p 'test_evidence_report.py' -v
+
+evidence-smoke: $(MUTEX_COMPARE)
+	python3 bench/evidence_report.py --benchmark ./$(MUTEX_COMPARE) \
+	  --threads 1,2 --requests 2000 --repeats 2 --warmups 1 \
+	  --compiler-note "$(CC) $(CFLAGS)" --output-dir $(BUILD_DIR)
+
+evidence-report: $(MUTEX_COMPARE)
+	python3 bench/evidence_report.py --benchmark ./$(MUTEX_COMPARE) \
+	  --threads 1,2,4,8 --requests 100000 --repeats 7 --warmups 2 \
+	  --compiler-note "$(CC) $(CFLAGS)" --output-dir $(BUILD_DIR)

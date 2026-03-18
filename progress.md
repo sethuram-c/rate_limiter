@@ -743,3 +743,16 @@ keep the in-process library scope explicit.
 - Documented what passing tests and scoped coverage can and cannot establish.
 - Personal Phase 34 PDF remains outside Git. Next: reproducible benchmark
   evidence, final release preparation and portfolio presentation.
+
+## Phase 35 - Reproducible benchmark evidence and report (2027-01-18)
+
+- Added a fail-closed, paired throughput evidence collector reusing the Phase 20
+  benchmark's strict parser, exact accounting, fixed-time workloads and
+  order rotation. Warmups are included in raw data but excluded from summaries.
+- Added machine/environment metadata (CPU, kernel, settings, binary SHA256,
+  source revision when available) and reports under ignored `build/`.
+- Report median per-mode throughput, median paired CAS/mutex ratio, median
+  absolute deviation and descriptive direction without universal claims.
+- Added independent runner tests, live smoke evidence generation and a
+  reproducible Fedora/Linux method guide. Core limiter algorithms unchanged.
+- Learning PDF remains outside the repository; next: final results/presentation.
