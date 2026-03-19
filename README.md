@@ -1,5 +1,16 @@
 # Lock-Free Per-IP Rate Limiter
 
+## Phase 36 - Source-grounded architecture diagrams
+
+- [System architecture](docs/system_architecture.md) includes rendered component,
+  request-decision, CAS-state and lifetime diagrams with editable DOT sources.
+- [Architecture decisions](docs/architecture_decisions.md) records the six
+  tradeoffs and boundaries, including the lock-free scope and teardown contract.
+- Run `make architecture-docs-test` without any new dependencies; optional
+  `make architecture-diagrams` regenerates SVGs if Graphviz is installed.
+- All diagrams and source live in Git; the separate study PDF stays outside Git.
+
+
 ## Phase 34 - Repeatable release quality gates
 
 The project now offers fail-closed, reproducible verification commands:

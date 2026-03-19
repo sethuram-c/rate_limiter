@@ -1,0 +1,20 @@
+digraph lifecycle {
+  graph [label="Thread and resource lifetime | happens-before boundary", labelloc=t,
+         fontsize=19, fontname="DejaVu Sans", pad=0.3, nodesep=0.45, ranksep=0.75,
+         bgcolor="transparent"];
+  node [shape=box, style="rounded,filled", fillcolor="#f4f7fb", color="#6886a6",
+        fontname="DejaVu Sans", fontsize=11, margin="0.2,0.13"];
+  edge [color="#536b80", arrowsize=0.78, fontsize=9, fontname="DejaVu Sans"];
+  empty [label="Zero-initialize service object"];
+  config [label="Validate configuration + lock-free support", fillcolor="#fff4da"];
+  init [label="Read initial time + allocate arrays\ninitialize ALL bucket policies/states", fillcolor="#dcefe5"];
+  spawn [label="Publish initialized service\nstart worker threads", fillcolor="#dceafe"];
+  active [label="Concurrent requests\nkey CAS + bucket CAS", fillcolor="#dceafe"];
+  stop [label="Stop admission of new work", fillcolor="#fff4da"];
+  join [label="Join ALL workers / wait for readers", fillcolor="#fff4da"];
+  destroy [label="Destroy service + free arrays", fillcolor="#e9e9f6"];
+  empty -> config -> init -> spawn -> active -> stop -> join -> destroy;
+  bad [label="Not supported: destroy / resize\nwhile requests still run", shape=note,
+       color="#bb6161", fillcolor="#fbe4e4"];
+  active -> bad [style=dashed, arrowhead=tee, color="#bb6161"];
+}

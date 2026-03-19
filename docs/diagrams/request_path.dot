@@ -1,0 +1,35 @@
+digraph request_path {
+  graph [label="Request path | conceptual decisions", labelloc=t, fontsize=19, fontname="DejaVu Sans",
+         pad=0.3, nodesep=0.38, ranksep=0.52, bgcolor="transparent"];
+  node [shape=box, style="rounded,filled", color="#6f8299", fillcolor="#f4f7fb",
+        fontname="DejaVu Sans", fontsize=10, margin="0.18,0.10"];
+  edge [color="#536b80", fontname="DejaVu Sans", fontsize=9, arrowsize=0.66];
+  start [label="Ingress (optional CIDR policy)", fillcolor="#dbeaf9"];
+  ingress [shape=diamond, label="Valid textual IPv4?", fillcolor="#fff3dc"];
+  decision [shape=diamond, label="CIDR policy match?", fillcolor="#fff3dc"];
+  local [label="BYPASS 200 / BLOCK 403\nno service call", fillcolor="#e8e7f7"];
+  bad [label="400 ingress rejection\nno clock / no counter", fillcolor="#f8e1e1"];
+  amount [shape=diamond, label="Requested tokens > 0?", fillcolor="#fff3dc"];
+  invalid [label="INVALID -> 400\nservice invalid counter increments", fillcolor="#f8e1e1"];
+  clock [shape=diamond, label="Clock sample valid?", fillcolor="#fff3dc"];
+  err [label="Clock error -> 503\nservice counter increments", fillcolor="#f8e1e1"];
+  oversize [shape=diamond, label="New IP and request\nexceeds capacity?", fillcolor="#fff3dc"];
+  direct [label="DENIED (429)\nno slot claimed", fillcolor="#fdecd8"];
+  lookup [shape=diamond, label="IP slot available?", fillcolor="#fff3dc"];
+  full [label="TABLE_FULL -> 503", fillcolor="#f8e1e1"];
+  cas [label="Atomic bucket CAS\nrefill + consume", fillcolor="#d8efe3"];
+  result [label="ALLOW 200 / DENY 429\nrecord service result", fillcolor="#d8efe3"];
+  start -> ingress; ingress -> bad [label="no"];
+  ingress -> decision [label="yes"];
+  decision -> local [label="bypass or block"];
+  decision -> amount [label="delegate / direct"];
+  amount -> invalid [label="no"];
+  amount -> clock [label="yes"];
+  clock -> err [label="no"];
+  clock -> oversize [label="yes"];
+  oversize -> direct [label="yes"];
+  oversize -> lookup [label="no"];
+  lookup -> full [label="no"];
+  lookup -> cas [label="yes / inserted"];
+  cas -> result;
+}

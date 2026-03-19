@@ -756,3 +756,16 @@ keep the in-process library scope explicit.
 - Added independent runner tests, live smoke evidence generation and a
   reproducible Fedora/Linux method guide. Core limiter algorithms unchanged.
 - Learning PDF remains outside the repository; next: final results/presentation.
+
+## Phase 36 - Architecture diagrams and technical design (2027-01-19)
+
+- Added editable Graphviz DOT sources and SVG renderings for module boundaries,
+  ingress decisions, atomic CAS retry behavior and resource lifetime.
+- Documented the separate key-insertion and bucket-decision CAS points,
+  injected-clock limitations, request counter boundaries and no-concurrent-destroy rule.
+- Recorded six design decisions and their alternatives/tradeoffs.
+- Added standard-library-only documentation contract tests to `make test`,
+  plus an optional Graphviz regeneration target for developers.
+- No production behavior, public header, or library ABI changes.
+- Personal PDF remains outside Git; next: portfolio-focused project README and
+  final verification/reporting.

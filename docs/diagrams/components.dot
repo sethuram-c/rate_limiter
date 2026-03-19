@@ -1,0 +1,30 @@
+digraph components {
+  graph [label="Per-IP rate limiter | module boundaries", labelloc=t, fontsize=20,
+         fontname="DejaVu Sans", bgcolor="transparent", pad=0.2, nodesep=0.48, ranksep=0.70,
+         splines=polyline];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,
+        color="#7088a6", fillcolor="#f4f7fb", margin="0.17,0.11"];
+  edge [color="#4b6584", arrowsize=0.7, fontsize=9, fontname="DejaVu Sans"];
+  caller [label="Application / caller", fillcolor="#ddeafc"];
+  policy [label="request_policy.c\nCIDR block / bypass", fillcolor="#f5e7cf"];
+  gateway [label="request_gateway.c\nvalidate IPv4 / status mapping"];
+  service [label="rate_service.c\nclock + outcome counters", fillcolor="#dbefe6"];
+  clock [label="monotonic_clock.c\nCLOCK_MONOTONIC or injected", shape=note];
+  indexer [label="ip_rate_limiter.c\nper-IP coordination", fillcolor="#dbefe6"];
+  table [label="ip_atomic_table.c\nfixed insert-only key index"];
+  bucket [label="lockfree_bucket.c\natomic CAS (64-bit state)"];
+  planner [label="bucket_state.c\npure token/time transition", shape=note];
+  parser [label="src/ipv4_parse_internal.h\nprivate shared parser", shape=note];
+  caller -> policy [label="optional"];
+  caller -> gateway [label="direct bounded ingress"];
+  caller -> service [label="numeric IPv4 API"];
+  policy -> gateway [label="delegate"];
+  gateway -> service [label="detail check"];
+  service -> clock [label="sample time", style=dashed];
+  service -> indexer [label="decision"];
+  indexer -> table [label="lookup / insert"];
+  indexer -> bucket [label="chosen slot"];
+  bucket -> planner [label="plan next state"];
+  parser -> policy [style=dashed, color="#8391a0", arrowhead=none];
+  parser -> gateway [style=dashed, color="#8391a0", arrowhead=none];
+}

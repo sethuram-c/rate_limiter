@@ -1,0 +1,21 @@
+digraph cas_state {
+  graph [label="Bucket state | CAS retry protocol", labelloc=t, fontsize=19,
+         fontname="DejaVu Sans", pad=0.3, nodesep=0.44, ranksep=0.58,
+         bgcolor="transparent"];
+  node [shape=box, style="rounded,filled", color="#7790a8", fillcolor="#f4f7fb",
+        fontname="DejaVu Sans", fontsize=10, margin="0.18,0.1"];
+  edge [color="#4f657e", fontsize=9, arrowsize=0.7, fontname="DejaVu Sans"];
+  observed [label="atomic_load 64-bit packed state\n48-bit refill anchor | 16-bit tokens", fillcolor="#dceafe"];
+  plan [label="Pure transition: bucket_state_plan()\ncompute refill and full-token request"];
+  valid [shape=diamond, label="Valid state / input?", fillcolor="#fff4da"];
+  fail [label="Return invalid; no state write", fillcolor="#f7e1e1"];
+  cas [shape=diamond, label="compare_exchange_weak\nsucceeds?", fillcolor="#fff4da"];
+  retry [label="CAS conflict or spurious failure\nrefresh observation + REPLAN", fillcolor="#fcecd6"];
+  commit [label="Linearization point = successful CAS\nALLOW or DENY (may refill on denial)", fillcolor="#d9eee1"];
+  observed -> plan -> valid;
+  valid -> fail [label="no"];
+  valid -> cas [label="yes"];
+  cas -> commit [label="yes"];
+  cas -> retry [label="no"];
+  retry -> plan [label="retry", constraint=false];
+}
