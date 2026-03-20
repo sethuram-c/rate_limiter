@@ -370,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: architecture-docs-test evidence-test quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: portfolio-docs-test architecture-docs-test evidence-test quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -440,6 +440,7 @@ help:
 	  'make package-test  Stage install and link a standalone C11 consumer' \
 	  'make docs-test    Verify public API docs and staged example' \
 	  'make architecture-docs-test  Validate Phase 36 DOT/SVG architecture contracts' \
+	  'make portfolio-docs-test   Validate Phase 37 README, links, claims and demo' \
 	  'make architecture-diagrams   Rebuild SVGs from DOT (requires Graphviz)' \
 	  'make ipv4-internal-test Check shared private IPv4 normalization' \
 	  'make impossible-request-test Prevent oversize requests from claiming IP slots' \
@@ -694,3 +695,8 @@ architecture-diagrams:
 	  dot -Tsvg docs/diagrams/$$name.dot -o docs/diagrams/$$name.svg || exit 1; \
 	done
 	@echo 'Regenerated 4 architecture SVGs from their DOT sources'
+
+# Phase 37: visitor-first project story and documentation contracts.
+.PHONY: portfolio-docs-test
+portfolio-docs-test:
+	python3 -m unittest discover -s tests -p 'test_portfolio_docs.py' -v

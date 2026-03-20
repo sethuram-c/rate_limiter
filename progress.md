@@ -769,3 +769,11 @@ keep the in-process library scope explicit.
 - No production behavior, public header, or library ABI changes.
 - Personal PDF remains outside Git; next: portfolio-focused project README and
   final verification/reporting.
+
+## Phase 37 - Portfolio README and reproducible project story (2027-01-20)
+
+- Condensed the accumulating phase-by-phase root README into a visitor-first portfolio overview with a verified Fedora quickstart, architecture image, scope/limitations and testing/benchmark links. Historical milestone details remain in this progress file and the specialist documents.
+- Added `docs/portfolio_overview.md` and `docs/project_demo.md` covering design trade-offs, a five-minute walkthrough and claims that should not be made without measurements.
+- Added fail-closed Markdown-link and claim/command contract tests, integrated in `make portfolio-docs-test` and `make test`.
+- Kept generated performance evidence and personal learning PDFs outside the source repository. No change to production concurrency code or public library ABI.
+- Next: final limitations, risk review and release-package checks.
