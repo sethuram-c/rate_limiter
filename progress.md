@@ -777,3 +777,19 @@ keep the in-process library scope explicit.
 - Added fail-closed Markdown-link and claim/command contract tests, integrated in `make portfolio-docs-test` and `make test`.
 - Kept generated performance evidence and personal learning PDFs outside the source repository. No change to production concurrency code or public library ABI.
 - Next: final limitations, risk review and release-package checks.
+
+## Phase 38 - Deployment assumptions and risk review (2027-01-21)
+
+- Documented twelve source-linked operational and integration risks in a
+  structured JSON register and a narrative production-readiness review.
+- Kept version 0.1.0 explicitly NOT_PRODUCTION_READY; four blockers include
+  untrusted client identity, index exhaustion, concurrent destruction and
+  absence of a network-server implementation.
+- Added a standard-library risk checker with evidence-file, make-target,
+  lifecycle and completeness validation; strict-production mode intentionally
+  exits 3 while blockers remain.
+- Added tests for 11 positive and negative review scenarios and integrated
+  their target into the ordinary regression suite. No lock-free algorithm,
+  public API, ABI, or benchmark numbers were changed.
+- The personal study PDF stays outside the Git repository.
+- Next: release-candidate verification and project demonstration.

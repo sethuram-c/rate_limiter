@@ -101,6 +101,8 @@ The performance tooling compares **mutex versus CAS bucket synchronization** und
 
 ## Project resources
 
+- [Production assumptions and unresolved deployment risks](docs/production_readiness.md) · [Machine-checked risk register](docs/production_risks.json)
+
 - [Engineering highlights and interview talking points](docs/portfolio_overview.md)
 - [Five-minute demo script](docs/project_demo.md)
 - [System architecture](docs/system_architecture.md) · [Architectural decisions](docs/architecture_decisions.md)
