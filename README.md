@@ -30,6 +30,9 @@ make static-check        # GCC and Clang static analysis
 make audit-asan          # targeted ASan and UBSan concurrency audit
 make ci-config-test      # GitHub Actions workflow checks
 make portfolio-docs-test # verify links, commands, version and portfolio claims
+make rc-test             # verify the RC runner itself
+make rc-check            # short source/package/contract verification
+make rc-demo             # run an installed consumer and request/policy demos
 ```
 
 `make test` and `make quality-release` can be longer-running because of concurrency and benchmark smoke tests. A sanitizer run or bounded concurrency test is **evidence**, not a mathematical proof for all schedules.
@@ -101,7 +104,7 @@ The performance tooling compares **mutex versus CAS bucket synchronization** und
 
 ## Project resources
 
-- [Production assumptions and unresolved deployment risks](docs/production_readiness.md) · [Machine-checked risk register](docs/production_risks.json)
+- [Release-candidate verification guide](docs/release_candidate_verification.md) · [Production assumptions and unresolved deployment risks](docs/production_readiness.md) · [Machine-checked risk register](docs/production_risks.json)
 
 - [Engineering highlights and interview talking points](docs/portfolio_overview.md)
 - [Five-minute demo script](docs/project_demo.md)

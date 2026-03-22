@@ -793,3 +793,12 @@ keep the in-process library scope explicit.
   public API, ABI, or benchmark numbers were changed.
 - The personal study PDF stays outside the Git repository.
 - Next: release-candidate verification and project demonstration.
+
+## Phase 39 - Release-candidate verification and final demonstration (2027-01-22)
+
+- Added a bounded, fail-closed release-candidate verifier with transparent Make targets, SHA-256 fingerprints of selected source inputs, and a JSON report under ignored `build/`.
+- Added a short, reproducible installed-library/gateway/policy demonstration.
+- Added negative and mutation tests for the verifier, including timeout, missing tools, false success, invalid source and risk-metadata checks.
+- Kept `0.1.0` **unreleased**, the deployment verdict `NOT_PRODUCTION_READY`, and the stable-ABI claim unsupported. This phase creates no tag or GitHub release.
+- Core lock-free library APIs and implementation remain unchanged; Phase 40 will handle final portfolio handoff and release notes.
+- Personal learning PDF belongs outside Git.

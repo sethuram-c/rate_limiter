@@ -370,7 +370,7 @@ mutex-compare-report: $(MUTEX_COMPARE)
 smoke-test: $(TARGET)
 	./tests/smoke.sh ./$(TARGET)
 
-test: risk-audit-test portfolio-docs-test architecture-docs-test evidence-test quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
+test: rc-test risk-audit-test portfolio-docs-test architecture-docs-test evidence-test quality-gate-test impossible-request-test ipv4-internal-test docs-test release-contract-test version-test package-test api-contract-test unit-test properties-test atomic-test state-test lockfree-test contention-test ip-plan-test ip-atomic-test ip-rate-test rate-service-test rate-config-test rate-diagnostics-test rate-status-test request-gateway-test request-policy-test benchmark-smoke scaling-test mutex-test mutex-compare-test traffic-profile-test cacheline-test latency-test audit-test audit-test-padded audit-runner-test benchmark-cli-test smoke-test ci-config-test static-runner-test
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -443,6 +443,9 @@ help:
 	  'make portfolio-docs-test   Validate Phase 37 README, links, claims and demo' \
 	  'make risk-audit-test      Verify the risk-audit checker, including failure cases' \
 	  'make risk-audit           Validate risk evidence without certifying production readiness' \
+	  'make rc-test              Verify RC command-failure and report semantics' \
+	  'make rc-check             Check version, package, API, concurrency, risk and CI contracts' \
+	  'make rc-demo              Exercise installed consumer, gateway and policy demos' \
 	  'make architecture-diagrams   Rebuild SVGs from DOT (requires Graphviz)' \
 	  'make ipv4-internal-test Check shared private IPv4 normalization' \
 	  'make impossible-request-test Prevent oversize requests from claiming IP slots' \
@@ -711,3 +714,15 @@ risk-audit-test:
 
 risk-audit:
 	python3 tools/risk_audit.py --summary
+
+# Phase 39: bounded, fail-closed verification and a real library demonstration.
+# JSON evidence belongs under ignored build/; no release/tag is produced.
+.PHONY: rc-test rc-check rc-demo
+rc-test:
+	python3 -m unittest discover -s tests -p 'test_rc_verify.py' -v
+
+rc-check:
+	python3 tools/rc_verify.py --profile check --compiler $(CC)
+
+rc-demo:
+	python3 tools/rc_verify.py --profile demo --compiler $(CC)
