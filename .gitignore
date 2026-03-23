@@ -20,3 +20,11 @@ perf.data.old
 
 # Local learning material is intentionally kept outside the repository.
 phase-*-learning*.pdf
+
+# Python bytecode from benchmark-report unit tests
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Personal learning guides belong outside this repository
+Phase_*_Learning_Guide_*.pdf

@@ -802,3 +802,13 @@ keep the in-process library scope explicit.
 - Kept `0.1.0` **unreleased**, the deployment verdict `NOT_PRODUCTION_READY`, and the stable-ABI claim unsupported. This phase creates no tag or GitHub release.
 - Core lock-free library APIs and implementation remain unchanged; Phase 40 will handle final portfolio handoff and release notes.
 - Personal learning PDF belongs outside Git.
+
+## Phase 40 - Final portfolio handoff and interview preparation (2027-01-23)
+
+- Completed a documented handoff of the unreleased C11 static-library portfolio project, preserving the existing lock-free algorithm and public API.
+- Added an evidence-to-source/test matrix, Fedora quickstart, verification hierarchy, ownership and shutdown obligations, and explicit scope exclusions.
+- Added resume-ready accomplishment bullets, short/long interview narratives, a five-minute demonstration script, and grounded answers about CAS, memory ordering, lock-free progress, risks and benchmark limitations.
+- Added a structured handoff manifest and fail-closed auditing tool with positive and mutation tests; the local checker never claims release certification or production readiness.
+- Version 0.1.0 remains **Unreleased** with four production blockers; no Git tag, remote publication, or network service is created by this phase.
+- Keep the personal Phase 40 PDF outside Git and benchmark/verification outputs under ignored `build/`.
+- Final phase in the 40-phase portfolio learning roadmap.

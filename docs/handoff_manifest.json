@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": 40,
+  "project_version": "0.1.0",
+  "commit_date": "2027-01-23",
+  "release_status": "Unreleased",
+  "deployment_verdict": "NOT_PRODUCTION_READY",
+  "learning_pdf_in_repository": false,
+  "release_created": false,
+  "documents": [
+    "README.md",
+    "docs/final_handoff.md",
+    "docs/resume_interview_kit.md",
+    "docs/production_readiness.md",
+    "docs/production_risks.json",
+    "docs/public_api_reference.md",
+    "docs/system_architecture.md"
+  ],
+  "evidence": [
+    {"claim": "CAS bucket concurrency", "source": "src/lockfree_bucket.c", "test": "tests/test_contention.c", "target": "contention-test"},
+    {"claim": "preallocated per-IP key index", "source": "src/ip_atomic_table.c", "test": "tests/test_ip_rate_limiter.c", "target": "ip-rate-test"},
+    {"claim": "installed static consumer", "source": "examples/public_api_walkthrough.c", "test": "tests/test_library_package.sh", "target": "package-test"},
+    {"claim": "resource-exhaustion protection", "source": "src/ip_rate_limiter.c", "test": "tests/test_impossible_requests.c", "target": "impossible-request-test"},
+    {"claim": "mutex comparison methodology", "source": "bench/mutex_compare.c", "test": "tests/mutex_benchmark_smoke.sh", "target": "mutex-compare-test"},
+    {"claim": "bounded RC verification", "source": "tools/rc_verify.py", "test": "tests/test_rc_verify.py", "target": "rc-test"}
+  ]
+}
