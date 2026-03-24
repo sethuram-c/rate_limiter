@@ -1,8 +1,8 @@
-# Resume and interview preparation - Phase 40
+# Project discussion notes
 
 **Claim discipline:** These statements refer to the checked-in **in-process C11 library**, not a production web service. Version **0.1.0 remains unreleased** and has explicit deployment blockers. Replace no placeholder with an invented speedup or throughput number.
 
-## Resume-ready project description
+## Short project description
 
 **Lock-Free Per-IP Rate Limiter | C11, POSIX Threads, Linux, Atomics, CAS**
 
@@ -59,7 +59,7 @@ Show `docs/diagrams/components.svg` and `docs/diagrams/cas_state.svg` while spea
 
 **12. Why is version 0.1.0 unreleased?** Packaging, reproducibility and automated checks exist, but the library still has explicit deployment blockers and an unpromised public ABI.
 
-## Technical discussion traps to avoid
+## Common misunderstandings
 
 - Do not call `429` output a real HTTP response: the gateway is an in-process adapter.
 - Do not call CAS wait-free: individual threads may retry indefinitely.
@@ -68,7 +68,7 @@ Show `docs/diagrams/components.svg` and `docs/diagrams/cas_state.svg` while spea
 - Do not call the 12 risk entries resolved: four remain production blockers.
 - Do not state that hosted GitHub Actions passed unless you actually checked the remote job results.
 
-## Final personal checklist (outside the repo)
+## Review checklist
 
 - [ ] I can explain every field in the 64-bit bucket state and why CAS is required.
 - [ ] I can trace first-time insertion to an initialized bucket.
@@ -78,4 +78,4 @@ Show `docs/diagrams/components.svg` and `docs/diagrams/cas_state.svg` while spea
 - [ ] I can show raw benchmark files before citing performance.
 - [ ] I have pushed to the intended Git remote and separately verified CI, if publishing.
 
-The core project is complete as a **portfolio/learning deliverable** after Phase 40. This does not convert it into a production-ready service.
+The implementation is complete for its current experimental scope, with the deployment limitations noted above.

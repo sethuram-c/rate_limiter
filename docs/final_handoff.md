@@ -1,8 +1,8 @@
-# Final project handoff - Phase 40
+# Verification and handoff notes
 
 **Snapshot:** C11 lock-free per-IP rate limiter, version **0.1.0 (Unreleased)**.
-**Phase date:** 2027-01-23. **Deployment verdict:** **NOT_PRODUCTION_READY**.
-This document describes a demonstrable portfolio/library snapshot, not a released product.
+**Deployment verdict:** **NOT_PRODUCTION_READY**.
+This describes the current library snapshot, not a published release.
 
 ## What is being handed off
 
@@ -23,7 +23,7 @@ On Fedora (if needed):
 sudo dnf install gcc clang make python3 git graphviz
 ```
 
-## Fast handoff path (run at repository root)
+## Quick verification (run at repository root)
 
 ```bash
 make clean
@@ -79,11 +79,11 @@ For source-linked blockers and mitigating actions see [production readiness](pro
 | Are policy limits honest? | `docs/production_risks.json` | `make risk-audit` |
 | How do mutex and CAS compare? | `bench/mutex_compare.c`, `docs/performance_evidence.md` | `make evidence-smoke` |
 
-## Reproducibility and handoff discipline
+## Reproducibility notes
 
 - Keep personal per-phase learning PDFs **outside** the Git repository. Keep binaries, benchmark CSVs and generated verification JSON under ignored `build/`.
-- The committed source snapshot should have a clean Git status after its single Phase 40 commit.
+- Use a clean working tree when reproducing measurements or comparing verification runs.
 - Before citing an experimental number, repeat the exact workload on the target machine and capture its metadata and raw records.
 - Do not move the experimental `0.1.0` label or change `NOT_PRODUCTION_READY` to imply a release.
 
-The final project story and appropriate resume language live in [resume and interview notes](resume_interview_kit.md). The visitor-facing overview remains [the repository README](../README.md). The full chronological development record remains [progress.md](../progress.md).
+Start with the [README](../README.md) for build instructions. The chronological development record is in [progress.md](../progress.md).
